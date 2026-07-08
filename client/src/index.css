@@ -306,6 +306,67 @@ body {
   text-decoration: underline;
 }
 
+.reco-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.reco-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--sidebar-2);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+.reco-cover {
+  width: 26px;
+  height: 38px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+.reco-cover img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.reco-info {
+  flex: 1;
+  min-width: 0;
+}
+.reco-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.reco-meta {
+  font-size: 10px;
+  color: var(--ink-soft);
+}
+.reco-add {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: var(--moss);
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+}
+.reco-add:disabled {
+  background: var(--sidebar-line);
+  color: var(--ink-soft);
+  cursor: default;
+}
+
 /* ---------- BOOKCASE ---------- */
 .stage {
   flex: 1;

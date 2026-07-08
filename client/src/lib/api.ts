@@ -1,5 +1,6 @@
 import type { Book } from "../types/book";
 import type { SearchResult } from "../types/searchResult";
+import type { Recommendation } from "../types/recommendation";
 
 export async function fetchShelf(): Promise<Book[]> {
   const res = await fetch("/api/shelf");
@@ -41,4 +42,13 @@ export function addBookToShelf(bookId: string): Promise<Book[]> {
 
 export function addSeriesToShelf(series: string): Promise<Book[]> {
   return postToShelf({ series });
+}
+
+export async function fetchRecommendations(
+  offset: number,
+  limit: number
+): Promise<{ recommendations: Recommendation[]; hasMore: boolean }> {
+  const res = await fetch(`/api/recommendations?offset=${offset}&limit=${limit}`);
+  if (!res.ok) throw new Error(`GET /api/recommendations failed: ${res.status}`);
+  return res.json();
 }

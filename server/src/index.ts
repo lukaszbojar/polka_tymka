@@ -6,6 +6,7 @@ import { seedIfEmpty } from "./db/seed";
 import { enrichMissingCovers } from "./services/enrichCovers";
 import { enrichSummaries } from "./services/enrichSummaries";
 import { search } from "./services/searchBooks";
+import { getRecommendations } from "./services/recommendations";
 import {
   addSeriesToShelf,
   addToShelf,
@@ -63,6 +64,12 @@ app.get("/api/search", async (req, res) => {
     console.error("Search failed:", err);
     res.status(502).json({ error: "Wyszukiwanie nie powiodło się" });
   }
+});
+
+app.get("/api/recommendations", (req, res) => {
+  const offset = Number(req.query.offset ?? 0) || 0;
+  const limit = Number(req.query.limit ?? 5) || 5;
+  res.json(getRecommendations(offset, limit));
 });
 
 async function main() {

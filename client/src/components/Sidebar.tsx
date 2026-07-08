@@ -4,6 +4,7 @@ import type { SearchResult } from "../types/searchResult";
 import type { ShelfFilter } from "../types/filter";
 import { addBookToShelf, addSeriesToShelf, searchBooks } from "../lib/api";
 import { SearchResults } from "./SearchResults";
+import { Recommendations } from "./Recommendations";
 
 function countBy(books: Book[], pick: (b: Book) => string[] | string) {
   const counts = new Map<string, number>();
@@ -174,6 +175,8 @@ export function Sidebar({
           ))}
         </div>
       </div>
+
+      <Recommendations onShelfChanged={onShelfChanged} />
     </aside>
   );
 }
