@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Półka Tymka</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sidebar:#20241D;
+    --sidebar-2:#2A2F26;
+    --sidebar-line:#3A4034;
+    --cream:#F3F0E7;
+    --ink:#23261F;
+    --ink-soft:#8A8D80;
+    --moss:#5B8A4E;
+    --moss-deep:#456B3B;
+    --gold:#C9A24B;
+    /* wood */
+    --wood-back:#C7A578;
+    --wood-back-2:#BE9A6C;
+    --shelf-top:#D8B888;
+    --shelf-face:#A67C4A;
+    --shelf-shadow:#8A6438;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{background:var(--cream);color:var(--ink);font-family:'Inter',sans-serif;line-height:1.4;}
+  .app{display:flex;min-height:100vh;}
+
+  /* ---------- SIDEBAR ---------- */
+  .sidebar{width:280px;flex-shrink:0;background:var(--sidebar);color:#EDEBE3;padding:26px 22px;display:flex;flex-direction:column;gap:26px;position:sticky;top:0;height:100vh;overflow-y:auto;}
+  .brand .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin:0 0 4px;}
+  .brand h1{font-family:'Fraunces',serif;font-weight:700;font-size:24px;margin:0;color:#fff;}
+  .search{display:flex;align-items:center;gap:8px;background:var(--sidebar-2);border:1px solid var(--sidebar-line);border-radius:10px;padding:9px 12px;}
+  .search svg{flex-shrink:0;color:var(--ink-soft);}
+  .search input{flex:1;border:none;background:none;outline:none;font-size:13px;color:#EDEBE3;font-family:'Inter',sans-serif;}
+  .search input::placeholder{color:#6E7266;}
+
+  .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .stat{background:var(--sidebar-2);border-radius:10px;padding:10px 12px;}
+  .stat .n{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;color:#fff;}
+  .stat .l{font-size:11px;color:var(--ink-soft);margin-top:1px;}
+
+  .facet h3{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin:0 0 8px;}
+  .facet-list{display:flex;flex-direction:column;gap:1px;}
+  .facet-item{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:7px;cursor:pointer;font-size:13px;color:#D8D6CD;transition:background .12s;}
+  .facet-item:hover{background:var(--sidebar-2);}
+  .facet-item.active{background:var(--moss);color:#fff;}
+  .facet-item .cnt{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);}
+  .facet-item.active .cnt{color:#DCEBD6;}
+  .clear-filter{margin-top:6px;background:none;border:1px solid var(--sidebar-line);color:#D8D6CD;font-size:12px;padding:6px 10px;border-radius:7px;cursor:pointer;font-family:'Inter',sans-serif;width:100%;display:none;}
+  .clear-filter.show{display:block;}
+  .clear-filter:hover{background:var(--sidebar-2);}
+
+  /* ---------- SEARCH RESULTS PANEL ---------- */
+  #results{display:none;flex-direction:column;gap:10px;}
+  #results.open{display:flex;}
+  .rcard{background:var(--sidebar-2);border:1px solid var(--sidebar-line);border-radius:10px;padding:11px 12px;}
+  .rcard-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;}
+  .rcard-head h4{margin:0;font-size:13px;color:#fff;font-weight:600;}
+  .rcard-head .meta{font-size:11px;color:var(--ink-soft);margin-top:1px;}
+  .mini-row{display:flex;gap:6px;flex-wrap:wrap;}
+  .mini{width:38px;height:56px;border-radius:2px 2px 1px 1px;position:relative;color:#fff;padding:4px;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;}
+  .mini .mt{font-size:7px;font-weight:600;line-height:1.1;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+  .mini .add{position:absolute;top:2px;right:2px;width:13px;height:13px;border-radius:50%;background:rgba(0,0,0,.4);border:none;color:#fff;font-size:10px;line-height:1;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .btn{font-family:'Inter',sans-serif;cursor:pointer;border-radius:8px;border:none;background:var(--moss);color:#fff;font-size:11.5px;font-weight:500;padding:6px 11px;}
+  .btn:hover{background:var(--moss-deep);}
+
+  /* ---------- BOOKCASE ---------- */
+  .stage{flex:1;padding:0;background:
+      linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,0) 90px),
+      repeating-linear-gradient(90deg, var(--wood-back) 0, var(--wood-back) 60px, var(--wood-back-2) 60px, var(--wood-back-2) 120px);
+    background-blend-mode:multiply;}
+  .stage-inner{padding:34px 46px 60px;}
+  .filter-banner{background:rgba(255,255,255,.82);border-radius:10px;padding:8px 14px;margin-bottom:20px;font-size:13px;color:var(--ink);display:none;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.12);}
+  .filter-banner.show{display:flex;}
+  .filter-banner button{background:none;border:none;color:var(--clay,#B5543A);font-size:12px;cursor:pointer;text-decoration:underline;}
+
+  .shelf{margin-bottom:6px;}
+  .shelf-title{font-family:'Fraunces',serif;font-size:15px;color:#43301A;margin:0 0 10px 4px;font-weight:600;display:flex;align-items:center;gap:10px;}
+  .shelf-title .sub{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6B5231;font-weight:400;}
+  .shelf-title button{margin-left:auto;background:rgba(255,255,255,.7);border:none;border-radius:6px;font-size:11px;padding:3px 9px;cursor:pointer;color:#5A4326;font-family:'Inter',sans-serif;}
+  .books{display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;min-height:190px;padding:0 6px;}
+  .book{position:relative;width:118px;height:174px;flex-shrink:0;transform-origin:bottom center;transition:transform .18s ease;cursor:default;}
+  .book:hover{transform:translateY(-8px);}
+  .book .cover{position:absolute;inset:0;border-radius:2px 4px 4px 2px;color:#fff;padding:14px 12px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:2px 4px 10px rgba(0,0,0,.35), inset 3px 0 0 rgba(255,255,255,.12), inset -6px 0 12px rgba(0,0,0,.22);overflow:hidden;}
+  .book .cover::before{content:'';position:absolute;left:5px;top:0;bottom:0;width:2px;background:rgba(0,0,0,.28);}
+  .book .brandline{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.08em;text-transform:uppercase;opacity:.85;}
+  .book .title{font-family:'Fraunces',serif;font-size:14px;font-weight:600;line-height:1.2;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
+  .book .foot{display:flex;justify-content:space-between;align-items:flex-end;font-size:9px;font-family:'IBM Plex Mono',monospace;opacity:.9;}
+  .book .rm{position:absolute;top:6px;right:6px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.4);border:none;color:#fff;font-size:12px;line-height:1;padding:0;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:3;}
+  .book:hover .rm{display:flex;}
+  .book .icon{position:absolute;top:12px;right:12px;opacity:.4;}
+  .plank{height:22px;border-radius:0 0 3px 3px;margin:0 -10px 30px;
+    background:linear-gradient(180deg, var(--shelf-top) 0, var(--shelf-top) 6px, var(--shelf-face) 6px, var(--shelf-shadow) 100%);
+    box-shadow:0 10px 16px rgba(0,0,0,.28);}
+  .empty{background:rgba(255,255,255,.82);border-radius:12px;padding:24px;text-align:center;color:var(--ink-soft);font-size:14px;}
+  @media (max-width:820px){ .sidebar{width:230px;} .book{width:100px;height:150px;} }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <p class="eyebrow">biblioteka przygód</p>
+      <h1>Półka Tymka</h1>
+    </div>
+
+    <div class="search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="q" type="text" placeholder="Dodaj książkę lub serię…" autocomplete="off">
+    </div>
+    <div id="results"></div>
+
+    <div class="stats-grid" id="stats"></div>
+
+    <button class="clear-filter" id="clear-filter">Wyczyść filtr</button>
+
+    <div class="facet">
+      <h3>Autorzy</h3>
+      <div class="facet-list" id="authors"></div>
+    </div>
+
+    <div class="facet">
+      <h3>Gatunki</h3>
+      <div class="facet-list" id="genres"></div>
+    </div>
+  </aside>
+
+  <!-- BOOKCASE -->
+  <main class="stage">
+    <div class="stage-inner">
+      <div class="filter-banner" id="filter-banner"></div>
+      <div id="shelf"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+const pawIcon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="#fff"><circle cx="12" cy="15.5" r="5"/><circle cx="5" cy="9" r="2.3"/><circle cx="10" cy="4.5" r="2.3"/><circle cx="14.5" cy="4.5" r="2.3"/><circle cx="19.5" cy="9" r="2.3"/></svg>';
+const bowIcon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M4 20 L20 4"/><path d="M20 4 L13 4 L20 11 Z" fill="#fff" stroke="none"/></svg>';
+
+const catalog = [
+  {id:'w1',title:'Ucieczka w dzicz',author:'Erin Hunter',series:'Wojownicy',arc:'Seria 1 · Wojownicy',order:1,year:2003,genres:['zwierzęta','przygoda','fantastyka'],color:'#3F6B4A',icon:pawIcon},
+  {id:'w2',title:'Ogień i lód',author:'Erin Hunter',series:'Wojownicy',arc:'Seria 1 · Wojownicy',order:2,year:2003,genres:['zwierzęta','przygoda','fantastyka'],color:'#3F6B4A',icon:pawIcon},
+  {id:'w3',title:'Las tajemnic',author:'Erin Hunter',series:'Wojownicy',arc:'Seria 1 · Wojownicy',order:3,year:2003,genres:['zwierzęta','przygoda','fantastyka'],color:'#3F6B4A',icon:pawIcon},
+  {id:'w4',title:'Cisza przed burzą',author:'Erin Hunter',series:'Wojownicy',arc:'Seria 1 · Wojownicy',order:4,year:2004,genres:['zwierzęta','przygoda','fantastyka'],color:'#3F6B4A',icon:pawIcon},
+  {id:'w5',title:'Niebezpieczna ścieżka',author:'Erin Hunter',series:'Wojownicy',arc:'Seria 1 · Wojownicy',order:5,year:2004,genres:['zwierzęta','przygoda','fantastyka'],color:'#3F6B4A',icon:pawIcon},
+  {id:'w6',title:'Czarna godzina',author:'Erin Hunter',series:'Wojownicy',arc:'Seria 1 · Wojownicy',order:6,year:2004,genres:['zwierzęta','przygoda','fantastyka'],color:'#3F6B4A',icon:pawIcon},
+  {id:'w7',title:'Północ',author:'Erin Hunter',series:'Wojownicy',arc:'Seria 2 · Nowa przepowiednia',order:7,year:2005,genres:['zwierzęta','przygoda','fantastyka'],color:'#345C3F',icon:pawIcon},
+  {id:'w8',title:'Wschód księżyca',author:'Erin Hunter',series:'Wojownicy',arc:'Seria 2 · Nowa przepowiednia',order:8,year:2005,genres:['zwierzęta','przygoda','fantastyka'],color:'#345C3F',icon:pawIcon},
+  {id:'w9',title:'Świt',author:'Erin Hunter',series:'Wojownicy',arc:'Seria 2 · Nowa przepowiednia',order:9,year:2005,genres:['zwierzęta','przygoda','fantastyka'],color:'#345C3F',icon:pawIcon},
+  {id:'w10',title:'Blask gwiazd',author:'Erin Hunter',series:'Wojownicy',arc:'Seria 2 · Nowa przepowiednia',order:10,year:2005,genres:['zwierzęta','przygoda','fantastyka'],color:'#345C3F',icon:pawIcon},
+  {id:'w11',title:'Zmierzch',author:'Erin Hunter',series:'Wojownicy',arc:'Seria 2 · Nowa przepowiednia',order:11,year:2006,genres:['zwierzęta','przygoda','fantastyka'],color:'#345C3F',icon:pawIcon},
+  {id:'w12',title:'Zachód słońca',author:'Erin Hunter',series:'Wojownicy',arc:'Seria 2 · Nowa przepowiednia',order:12,year:2006,genres:['zwierzęta','przygoda','fantastyka'],color:'#345C3F',icon:pawIcon},
+  {id:'w13',title:'Widzenie',author:'Erin Hunter',series:'Wojownicy',arc:'Seria 3 · Potęga trójki',order:13,year:2007,genres:['zwierzęta','przygoda','fantastyka'],color:'#517F5C',icon:pawIcon},
+  {id:'w14',title:'Mroczna rzeka',author:'Erin Hunter',series:'Wojownicy',arc:'Seria 3 · Potęga trójki',order:14,year:2007,genres:['zwierzęta','przygoda','fantastyka'],color:'#517F5C',icon:pawIcon},
+  {id:'w15',title:'Wyrzutek',author:'Erin Hunter',series:'Wojownicy',arc:'Seria 3 · Potęga trójki',order:15,year:2008,genres:['zwierzęta','przygoda','fantastyka'],color:'#517F5C',icon:pawIcon},
+  {id:'w16',title:'Zaćmienie',author:'Erin Hunter',series:'Wojownicy',arc:'Seria 3 · Potęga trójki',order:16,year:2008,genres:['zwierzęta','przygoda','fantastyka'],color:'#517F5C',icon:pawIcon},
+  {id:'w17',title:'Długie cienie',author:'Erin Hunter',series:'Wojownicy',arc:'Seria 3 · Potęga trójki',order:17,year:2008,genres:['zwierzęta','przygoda','fantastyka'],color:'#517F5C',icon:pawIcon},
+  {id:'w18',title:'Wschód Słońca',author:'Erin Hunter',series:'Wojownicy',arc:'Seria 3 · Potęga trójki',order:18,year:2009,genres:['zwierzęta','przygoda','fantastyka'],color:'#517F5C',icon:pawIcon},
+  {id:'z1',title:'Ruiny Gorlanu',author:'John Flanagan',series:'Zwiadowcy',arc:'Will i Halt',order:1,year:2004,genres:['przygoda','fantastyka'],color:'#5E4B6B',icon:bowIcon},
+  {id:'z2',title:'Płonący most',author:'John Flanagan',series:'Zwiadowcy',arc:'Will i Halt',order:2,year:2005,genres:['przygoda','fantastyka'],color:'#5E4B6B',icon:bowIcon},
+  {id:'z3',title:'Ziemia skuta lodem',author:'John Flanagan',series:'Zwiadowcy',arc:'Will i Halt',order:3,year:2006,genres:['przygoda','fantastyka'],color:'#5E4B6B',icon:bowIcon},
+  {id:'z4',title:'Bitwa o Skandię',author:'John Flanagan',series:'Zwiadowcy',arc:'Will i Halt',order:4,year:2006,genres:['przygoda','fantastyka'],color:'#5E4B6B',icon:bowIcon},
+  {id:'z5',title:'Czarnoksiężnik z Północy',author:'John Flanagan',series:'Zwiadowcy',arc:'Will i Halt',order:5,year:2006,genres:['przygoda','fantastyka'],color:'#5E4B6B',icon:bowIcon},
+  {id:'z6',title:'Oblężenie Macindaw',author:'John Flanagan',series:'Zwiadowcy',arc:'Will i Halt',order:6,year:2006,genres:['przygoda','fantastyka'],color:'#5E4B6B',icon:bowIcon},
+  {id:'z7',title:'Okup za Eraka',author:'John Flanagan',series:'Zwiadowcy',arc:'Will i Halt',order:7,year:2007,genres:['przygoda','fantastyka'],color:'#5E4B6B',icon:bowIcon},
+  {id:'z8',title:'Królowie Clonmelu',author:'John Flanagan',series:'Zwiadowcy',arc:'Will i Halt',order:8,year:2008,genres:['przygoda','fantastyka'],color:'#5E4B6B',icon:bowIcon},
+  {id:'z9',title:'Halt w niebezpieczeństwie',author:'John Flanagan',series:'Zwiadowcy',arc:'Will i Halt',order:9,year:2009,genres:['przygoda','fantastyka'],color:'#5E4B6B',icon:bowIcon},
+  {id:'z10',title:'Cesarz Nihon-Ja',author:'John Flanagan',series:'Zwiadowcy',arc:'Will i Halt',order:10,year:2010,genres:['przygoda','fantastyka'],color:'#5E4B6B',icon:bowIcon},
+  {id:'z11',title:'Zaginione historie',author:'John Flanagan',series:'Zwiadowcy',arc:'Will i Halt',order:11,year:2011,genres:['przygoda','fantastyka'],color:'#5E4B6B',icon:bowIcon},
+  {id:'z12',title:'Królewski zwiadowca',author:'John Flanagan',series:'Zwiadowcy',arc:'Nowe pokolenie · Will i Maddie',order:12,year:2017,genres:['przygoda','fantastyka'],color:'#7A5E8C',icon:bowIcon},
+  {id:'z13',title:'Klan Czerwonego Lisa',author:'John Flanagan',series:'Zwiadowcy',arc:'Nowe pokolenie · Will i Maddie',order:13,year:2018,genres:['przygoda','fantastyka'],color:'#7A5E8C',icon:bowIcon},
+  {id:'z14',title:'Pojedynek w Araluenie',author:'John Flanagan',series:'Zwiadowcy',arc:'Nowe pokolenie · Will i Maddie',order:14,year:2018,genres:['przygoda','fantastyka'],color:'#7A5E8C',icon:bowIcon},
+  {id:'z15',title:'Zaginiony książę',author:'John Flanagan',series:'Zwiadowcy',arc:'Nowe pokolenie · Will i Maddie',order:15,year:2019,genres:['przygoda','fantastyka'],color:'#7A5E8C',icon:bowIcon},
+  {id:'z16',title:'Ucieczka z zamku Falaise',author:'John Flanagan',series:'Zwiadowcy',arc:'Nowe pokolenie · Will i Maddie',order:16,year:2020,genres:['przygoda','fantastyka'],color:'#7A5E8C',icon:bowIcon},
+  {id:'z17',title:'Wilki Arazan',author:'John Flanagan',series:'Zwiadowcy',arc:'Nowe pokolenie · Will i Maddie',order:17,year:2022,genres:['przygoda','fantastyka'],color:'#7A5E8C',icon:bowIcon},
+  {id:'z18',title:'Zasadzka w Sorato',author:'John Flanagan',series:'Zwiadowcy',arc:'Nowe pokolenie · Will i Maddie',order:18,year:2024,genres:['przygoda','fantastyka'],color:'#7A5E8C',icon:bowIcon},
+  {id:'wof1',title:'The Dragonet Prophecy',author:'Tui T. Sutherland',series:'Wings of Fire',arc:null,order:1,year:2012,genres:['zwierzęta','przygoda','fantastyka'],color:'#2E7D8A',icon:pawIcon},
+  {id:'rw1',title:'Redwall',author:'Brian Jacques',series:'Redwall',arc:null,order:1,year:1986,genres:['zwierzęta','przygoda'],color:'#8A5A2E',icon:pawIcon},
+  {id:'sv1',title:'The Empty City',author:'Erin Hunter',series:'Survivors',arc:null,order:1,year:2012,genres:['zwierzęta','przygoda'],color:'#4A6070',icon:pawIcon},
+  {id:'pj1',title:'The Lightning Thief',author:'Rick Riordan',series:'Percy Jackson',arc:null,order:1,year:2005,genres:['mitologia','przygoda','fantastyka'],color:'#B5822E',icon:bowIcon},
+  {id:'hp1',title:'Harry Potter i Kamień Filozoficzny',author:'J.K. Rowling',series:'Harry Potter',arc:null,order:1,year:1997,genres:['magia','przygoda','fantastyka'],color:'#6B2E3A',icon:bowIcon}
+];
+const aliases = {'warrior cats':'wojownicy','wojownicy koty':'wojownicy','rangers apprentice':'zwiadowcy',"ranger's apprentice":'zwiadowcy'};
+
+let shelf = new Set(['w1','w2','w3','z1','z2','z3','z4','z5','z6','z7','z8','z9','z10','z11','z12','z13','z14','z15','z16','z17','z18']);
+let filter = null; // {type:'author'|'genre', value:'...'}
+
+function norm(s){return s.toLowerCase().trim();}
+function ownedBooks(){ return [...shelf].map(id=>catalog.find(b=>b.id===id)); }
+function matchQuery(q){
+  q = norm(q); if(!q) return [];
+  q = aliases[q] || q;
+  return catalog.filter(b => norm(b.title).includes(q) || norm(b.author).includes(q) || norm(b.series||'').includes(q));
+}
+function seriesBooks(name){ return catalog.filter(b=>b.series===name).sort((a,b)=>a.order-b.order); }
+
+/* ---------- SIDEBAR: stats + facets ---------- */
+function renderStats(){
+  const books = ownedBooks();
+  const authors = new Set(books.map(b=>b.author)).size;
+  const series = new Set(books.filter(b=>b.series).map(b=>b.series)).size;
+  const genres = new Set(books.flatMap(b=>b.genres)).size;
+  document.getElementById('stats').innerHTML =
+    '<div class="stat"><div class="n">'+books.length+'</div><div class="l">przeczytane</div></div>'
+    +'<div class="stat"><div class="n">'+series+'</div><div class="l">serie</div></div>'
+    +'<div class="stat"><div class="n">'+authors+'</div><div class="l">autorzy</div></div>'
+    +'<div class="stat"><div class="n">'+genres+'</div><div class="l">gatunki</div></div>';
+}
+function renderFacets(){
+  const books = ownedBooks();
+  const aCount = {}; const gCount = {};
+  books.forEach(b=>{ aCount[b.author]=(aCount[b.author]||0)+1; b.genres.forEach(g=>gCount[g]=(gCount[g]||0)+1); });
+  const aHtml = Object.entries(aCount).sort((a,b)=>b[1]-a[1]).map(([a,c])=>{
+    const active = filter && filter.type==='author' && filter.value===a;
+    return '<div class="facet-item'+(active?' active':'')+'" data-author="'+a+'"><span>'+a+'</span><span class="cnt">'+c+'</span></div>';
+  }).join('') || '<div class="facet-item" style="cursor:default;color:#6E7266;">—</div>';
+  const gHtml = Object.entries(gCount).sort((a,b)=>b[1]-a[1]).map(([g,c])=>{
+    const active = filter && filter.type==='genre' && filter.value===g;
+    return '<div class="facet-item'+(active?' active':'')+'" data-genre="'+g+'"><span>'+g+'</span><span class="cnt">'+c+'</span></div>';
+  }).join('') || '<div class="facet-item" style="cursor:default;color:#6E7266;">—</div>';
+  document.getElementById('authors').innerHTML = aHtml;
+  document.getElementById('genres').innerHTML = gHtml;
+  document.getElementById('clear-filter').classList.toggle('show', !!filter);
+}
+
+/* ---------- SEARCH RESULTS (in sidebar) ---------- */
+function miniHTML(b){
+  return '<div class="mini" style="background:'+b.color+';"><button class="add" data-toggle="'+b.id+'">'+(shelf.has(b.id)?'&times;':'+')+'</button><div class="mt">'+b.title+'</div></div>';
+}
+function renderResults(q){
+  const el = document.getElementById('results');
+  const found = matchQuery(q);
+  if(!found.length){ el.classList.remove('open'); el.innerHTML=''; return; }
+  el.classList.add('open');
+  const seriesNames = [...new Set(found.filter(b=>b.series).map(b=>b.series))];
+  const standalone = found.filter(b=>!b.series);
+  let html='';
+  seriesNames.forEach(name=>{
+    const books=seriesBooks(name); const years=books[0].year+'–'+books[books.length-1].year;
+    html+='<div class="rcard"><div class="rcard-head"><div><h4>'+name+'</h4><p class="meta">'+books[0].author+' · '+years+' · '+books.length+' tomów</p></div>'
+      +'<button class="btn" data-addseries="'+name+'">+ seria</button></div>'
+      +'<div class="mini-row">'+books.map(miniHTML).join('')+'</div></div>';
+  });
+  standalone.forEach(b=>{
+    html+='<div class="rcard"><div class="rcard-head"><div><h4>'+b.title+'</h4><p class="meta">'+b.author+' · '+b.year+'</p></div>'
+      +'<button class="btn" data-toggle="'+b.id+'">'+(shelf.has(b.id)?'na półce':'+ dodaj')+'</button></div>'
+      +'<div class="mini-row">'+miniHTML(b)+'</div></div>';
+  });
+  el.innerHTML=html;
+}
+
+/* ---------- BOOKCASE ---------- */
+function bookHTML(b){
+  return '<div class="book"><div class="cover" style="background:'+b.color+';">'
+    +'<button class="rm" data-toggle="'+b.id+'" title="Usuń z półki">&times;</button>'
+    +'<div class="icon">'+b.icon+'</div>'
+    +'<div class="brandline">'+(b.series||'')+'</div>'
+    +'<div class="title">'+b.title+'</div>'
+    +'<div class="foot"><span>tom '+b.order+'</span><span>'+b.year+'</span></div>'
+    +'</div></div>';
+}
+// split a flat list of books into visual shelves of `per` books each
+function shelfRows(books, per){
+  const rows=[]; for(let i=0;i<books.length;i+=per) rows.push(books.slice(i,i+per));
+  return rows;
+}
+function renderShelf(){
+  const el = document.getElementById('shelf');
+  let books = ownedBooks();
+  // apply filter
+  if(filter){
+    if(filter.type==='author') books = books.filter(b=>b.author===filter.value);
+    if(filter.type==='genre') books = books.filter(b=>b.genres.includes(filter.value));
+  }
+  // banner
+  const banner = document.getElementById('filter-banner');
+  if(filter){ banner.classList.add('show'); banner.innerHTML='<span>Filtr: <strong>'+filter.value+'</strong> — '+books.length+' książek</span><button id="banner-clear">pokaż wszystkie</button>'; }
+  else banner.classList.remove('show');
+
+  if(!books.length){ el.innerHTML='<div class="empty">Brak książek dla tego filtra.</div>'; return; }
+
+  // group by series (preserving catalog order), keep standalone together
+  const groups=[]; const bySeries={};
+  books.sort((a,b)=> (a.series||a.title).localeCompare(b.series||b.title) || a.order-b.order);
+  const seriesOrder=[];
+  books.forEach(b=>{ const k=b.series||('__'+b.id); if(!bySeries[k]){bySeries[k]=[];seriesOrder.push(k);} bySeries[k].push(b); });
+
+  const per = 5; // books per visual shelf plank
+  let html='';
+  seriesOrder.forEach(k=>{
+    const list=bySeries[k].sort((a,b)=>a.order-b.order);
+    const first=list[0];
+    if(first.series){
+      const all=seriesBooks(first.series);
+      html+='<div class="shelf"><p class="shelf-title">'+first.series+' <span class="sub">'+first.author+' · '+list.length+' / '+all.length+' tomów</span></p>';
+    }else{
+      html+='<div class="shelf"><p class="shelf-title">'+first.title+' <span class="sub">'+first.author+'</span></p>';
+    }
+    shelfRows(list, per).forEach(row=>{
+      html+='<div class="books">'+row.map(bookHTML).join('')+'</div><div class="plank"></div>';
+    });
+    html+='</div>';
+  });
+  el.innerHTML=html;
+}
+
+function renderAll(){ renderStats(); renderFacets(); renderShelf(); renderResults(document.getElementById('q').value); }
+
+document.getElementById('q').addEventListener('input', e=>renderResults(e.target.value));
+document.addEventListener('click', e=>{
+  const t=e.target.closest('[data-toggle]');
+  const as=e.target.closest('[data-addseries]');
+  const au=e.target.closest('[data-author]');
+  const ge=e.target.closest('[data-genre]');
+  const cf=e.target.closest('#clear-filter, #banner-clear');
+  if(t){ const id=t.getAttribute('data-toggle'); shelf.has(id)?shelf.delete(id):shelf.add(id); renderAll(); return; }
+  if(as){ seriesBooks(as.getAttribute('data-addseries')).forEach(b=>shelf.add(b.id)); renderAll(); return; }
+  if(au){ const v=au.getAttribute('data-author'); filter=(filter&&filter.type==='author'&&filter.value===v)?null:{type:'author',value:v}; renderAll(); return; }
+  if(ge){ const v=ge.getAttribute('data-genre'); filter=(filter&&filter.type==='genre'&&filter.value===v)?null:{type:'genre',value:v}; renderAll(); return; }
+  if(cf){ filter=null; renderAll(); return; }
+  if(!e.target.closest('.search') && !e.target.closest('#results')){ document.getElementById('results').classList.remove('open'); }
+});
+
+renderAll();
+</script>
+</body>
+</html>
