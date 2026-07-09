@@ -3,6 +3,7 @@ import type { SearchResult } from "../types/searchResult";
 import type { ShelfStatus } from "../types/shelfStatus";
 import { addBookToShelf, addSeriesToShelf, searchBooks } from "../lib/api";
 import { LargeBookCard } from "../components/LargeBookCard";
+import { SearchLoader } from "../components/SearchLoader";
 
 export function SearchTab() {
   const [query, setQuery] = useState("");
@@ -70,9 +71,11 @@ export function SearchTab() {
         </button>
       </div>
 
-      {error && <p className="search-status search-status-error">{error}</p>}
+      {loading && <SearchLoader />}
 
-      {result && result.type === "series" && result.seriesName && (
+      {!loading && error && <p className="search-status search-status-error">{error}</p>}
+
+      {!loading && result && result.type === "series" && result.seriesName && (
         <div className="fullpage-series-header">
           <h2>{result.seriesName}</h2>
           <p>
@@ -89,7 +92,7 @@ export function SearchTab() {
         </div>
       )}
 
-      {result && (
+      {!loading && result && (
         <div className="large-card-grid">
           {result.books.map((b) => (
             <LargeBookCard

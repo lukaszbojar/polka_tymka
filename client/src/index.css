@@ -613,6 +613,102 @@ body {
   text-align: center;
   margin-top: 60px;
 }
+
+/* ---------- SEARCH LOADER (chłopiec z latarką w bibliotece) ---------- */
+.search-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-top: 40px;
+}
+.search-loader-svg {
+  width: 100%;
+  max-width: 640px;
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+.search-loader-text {
+  font-family: "Fraunces", serif;
+  font-size: 17px;
+  color: var(--ink-soft);
+}
+.search-loader-walker {
+  animation: search-loader-walk 6s linear infinite;
+}
+.search-loader-bob {
+  animation: search-loader-bob 0.45s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+.search-loader-leg-l {
+  animation: search-loader-swing 0.45s ease-in-out infinite;
+  transform-origin: 0 164px;
+}
+.search-loader-leg-r {
+  animation: search-loader-swing 0.45s ease-in-out infinite reverse;
+  transform-origin: 4px 164px;
+}
+.search-loader-arm {
+  animation: search-loader-arm-swing 0.45s ease-in-out infinite;
+  transform-origin: 7px 135px;
+}
+.search-loader-beam {
+  animation: search-loader-flicker 1.6s ease-in-out infinite;
+}
+@keyframes search-loader-walk {
+  0% {
+    transform: translateX(-60px);
+  }
+  100% {
+    transform: translateX(660px);
+  }
+}
+@keyframes search-loader-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+@keyframes search-loader-swing {
+  0%,
+  100% {
+    transform: rotate(22deg);
+  }
+  50% {
+    transform: rotate(-22deg);
+  }
+}
+@keyframes search-loader-arm-swing {
+  0%,
+  100% {
+    transform: rotate(-6deg);
+  }
+  50% {
+    transform: rotate(6deg);
+  }
+}
+@keyframes search-loader-flicker {
+  0%,
+  100% {
+    opacity: 0.75;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .search-loader-walker,
+  .search-loader-bob,
+  .search-loader-leg-l,
+  .search-loader-leg-r,
+  .search-loader-arm,
+  .search-loader-beam {
+    animation: none;
+  }
+}
 .fullpage-series-header {
   margin-bottom: 28px;
 }
