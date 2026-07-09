@@ -40,7 +40,12 @@ interface OpenLibraryEdition {
 // dzieło (po tytule oryginalnym) i dopiero przejrzeć jego listę wydań, bo
 // pole language na poziomie samego dzieła jest zawodnym agregatem. Próbujemy
 // najpierw (A), bo jest tańsze, a dopiero gdy nic nie znajdzie — (B).
-async function searchDirectPolish(title: string, author: string, maxResults: number): Promise<OpenLibraryResult[]> {
+async function searchDirectPolish(
+  title: string,
+  originalTitle: string,
+  author: string,
+  maxResults: number
+): Promise<OpenLibraryResult[]> {
   const params = new URLSearchParams({
     q: `${title} ${author} language:pol`,
     fields: "key,title,author_name,first_publish_year,cover_i,language",
@@ -51,7 +56,18 @@ async function searchDirectPolish(title: string, author: string, maxResults: num
   });
   const data = (await res.json()) as { docs?: OpenLibraryDoc[] };
   return (data.docs ?? [])
-    .filter((d) => d.title && d.key && d.language?.includes("pol") && titlesMatch(d.title, title))
+    .filter(
+      (d) =>
+        d.title &&
+        d.key &&
+        d.language?.includes("pol") &&
+        titlesMatch(d.title, title) &&
+        // "language" na tym poziomie bywa agregatem WSZYSTKICH wydań dzieła —
+        // dzieło z angielskim I polskim wydaniem przejdzie filtr "pol" powyżej,
+        // ale zwrócony "title" bywa wtedy wciąż domyślnym (angielskim). Jeśli
+        // ten sam tytuł pasuje też do oryginału, to nie jest wiarygodnie polski.
+        !titlesMatch(d.title, originalTitle)
+    )
     .map((d) => ({
       workKey: d.key!,
       title: d.title!,
@@ -95,7 +111,7 @@ export async function searchOpenLibraryPolish(
   polishTitleGuess: string,
   author: string
 ): Promise<OpenLibraryResult[]> {
-  const direct = await searchDirectPolish(polishTitleGuess, author, 3).catch(() => []);
+  const direct = await searchDirectPolish(polishTitleGuess, originalTitle, author, 3).catch(() => []);
   if (direct.length) return direct;
 
   const works = await searchOpenLibraryWorks(originalTitle, author, 2);
