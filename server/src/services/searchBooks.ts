@@ -305,7 +305,25 @@ async function performSearch(query: string): Promise<SearchResult> {
       return { volume, resolved, id };
     });
 
-    for (const { volume, resolved, id } of resolvedVolumes) {
+    // Deduplikacja WEWNĄTRZ tej samej odpowiedzi — findByTitleAuthor widzi tylko
+    // książki zapisane we WCZEŚNIEJSZYCH wyszukiwaniach, bo rozwiązywanie tomów
+    // jest równoległe i wszystkie zapisy do bazy dzieją się dopiero po nim. Gdy
+    // Claude poda ten sam (zbyt ogólny) tytuł dla kilku różnych tomów, bez tego
+    // każdy trafiał do wyników jako osobna, zduplikowana pozycja.
+    const deduped: typeof resolvedVolumes = [];
+    const seenAt = new Map<string, number>();
+    for (const item of resolvedVolumes) {
+      const key = `${item.resolved.title.trim().toLowerCase()}|${item.resolved.author.trim().toLowerCase()}`;
+      const existingIdx = seenAt.get(key);
+      if (existingIdx === undefined) {
+        seenAt.set(key, deduped.length);
+        deduped.push(item);
+      } else if (!deduped[existingIdx].resolved.coverUrl && item.resolved.coverUrl) {
+        deduped[existingIdx] = { ...item, volume: deduped[existingIdx].volume };
+      }
+    }
+
+    for (const { volume, resolved, id } of deduped) {
       newBooks.push({
         id,
         title: resolved.title,

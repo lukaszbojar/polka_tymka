@@ -127,7 +127,7 @@ export async function orderSeriesVolumes(
       // myślenie adaptacyjne potrafiło trwać kilkadziesiąt sekund, co
       // przekraczało limit czasu funkcji serverless. Trochę kosztuje
       // kompletność, ale wyszukiwanie musi w ogóle zdążyć się wykonać.
-      effort: "low",
+      effort: "medium",
       format: {
         type: "json_schema",
         schema: {
