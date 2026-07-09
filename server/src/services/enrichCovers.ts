@@ -78,9 +78,9 @@ async function findCover(title: string, author: string): Promise<FoundCover> {
 // (udanej lub nie) source zmienia się na wynik wyszukiwania, więc kolejne
 // restarty serwera (np. tsx watch) nie odpytują ponownie tych samych pozycji.
 export async function enrichMissingCovers(): Promise<void> {
-  const rows = db
+  const rows = (await db
     .prepare("SELECT id, title, author FROM books WHERE source = 'seed'")
-    .all() as BookToEnrich[];
+    .all()) as BookToEnrich[];
   if (!rows.length) return;
 
   console.log(`Wzbogacanie ${rows.length} książek danymi z Google Books i Open Library…`);
@@ -92,7 +92,7 @@ export async function enrichMissingCovers(): Promise<void> {
   for (const book of rows) {
     try {
       const found = await findCover(book.title, book.author);
-      update.run(found.coverUrl, found.source, found.rawJson, book.id);
+      await update.run(found.coverUrl, found.source, found.rawJson, book.id);
     } catch (err) {
       console.error(`Nie udało się wzbogacić "${book.title}":`, (err as Error).message);
     }

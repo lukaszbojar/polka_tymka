@@ -52,9 +52,9 @@ export async function getRecommendations(
   offset = 0,
   limit = 5
 ): Promise<{ recommendations: Recommendation[]; hasMore: boolean }> {
-  const owned = db
+  const owned = (await db
     .prepare(`SELECT b.title, b.author, b.genres, s.status FROM books b JOIN shelf s ON s.book_id = b.id`)
-    .all() as { title: string; author: string; genres: string; status: string }[];
+    .all()) as { title: string; author: string; genres: string; status: string }[];
 
   const ownedKeys = new Set(owned.map((r) => `${normalize(r.title)}|${normalize(r.author)}`));
 
@@ -69,7 +69,7 @@ export async function getRecommendations(
   }
 
   const candidates = (
-    db.prepare(`SELECT * FROM books WHERE id NOT IN (SELECT book_id FROM shelf)`).all() as CandidateRow[]
+    (await db.prepare(`SELECT * FROM books WHERE id NOT IN (SELECT book_id FROM shelf)`).all()) as CandidateRow[]
   ).filter((c) => !ownedKeys.has(`${normalize(c.title)}|${normalize(c.author)}`));
 
   const scored = candidates.map((c) => {
@@ -122,7 +122,7 @@ export async function getRecommendations(
         knownKeys.add(resolvedKey);
 
         const genres = resolved.genres.length ? resolved.genres : s.genres;
-        upsertBook({
+        await upsertBook({
           id: resolved.id,
           title: resolved.title,
           author: resolved.author,
@@ -167,7 +167,7 @@ export async function getRecommendations(
       if (!summary) {
         try {
           summary = await generateSummary(c.title, c.author, extractDescription(c.source, c.raw_json));
-          updateSummary.run(summary, c.id);
+          await updateSummary.run(summary, c.id);
         } catch {
           summary = null;
         }

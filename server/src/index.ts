@@ -1,10 +1,6 @@
 import express from "express";
 import cors from "cors";
-import path from "node:path";
-import dotenv from "dotenv";
-import { seedIfEmpty } from "./db/seed";
-import { enrichMissingCovers } from "./services/enrichCovers";
-import { enrichSummaries } from "./services/enrichSummaries";
+import { ensureSchema } from "./db";
 import { search } from "./services/searchBooks";
 import { getRecommendations } from "./services/recommendations";
 import {
@@ -17,47 +13,53 @@ import {
 
 const SHELF_STATUSES: ShelfStatus[] = ["read", "want", "not_interested"];
 
-dotenv.config({ path: path.join(__dirname, "..", ".env") });
-
-const app = express();
-const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
+export const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(async (_req, res, next) => {
+  try {
+    await ensureSchema();
+    next();
+  } catch (err) {
+    console.error("Schema init failed:", err);
+    res.status(503).json({ error: "Baza danych jest niedostępna" });
+  }
+});
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
 });
 
-app.get("/api/shelf", (req, res) => {
+app.get("/api/shelf", async (req, res) => {
   const status = SHELF_STATUSES.includes(req.query.status as ShelfStatus)
     ? (req.query.status as ShelfStatus)
     : undefined;
-  res.json({ books: listShelf(status) });
+  res.json({ books: await listShelf(status) });
 });
 
-app.post("/api/shelf", (req, res) => {
+app.post("/api/shelf", async (req, res) => {
   const { bookId, series, status } = req.body ?? {};
   const shelfStatus: ShelfStatus = SHELF_STATUSES.includes(status) ? status : "read";
 
   if (bookId) {
-    const ok = addToShelf(bookId, shelfStatus);
+    const ok = await addToShelf(bookId, shelfStatus);
     if (!ok) return res.status(404).json({ error: "Book not found" });
-    return res.status(201).json({ books: listShelf() });
+    return res.status(201).json({ books: await listShelf() });
   }
 
   if (series) {
-    const added = addSeriesToShelf(series, shelfStatus);
+    const added = await addSeriesToShelf(series, shelfStatus);
     if (added === 0) return res.status(404).json({ error: "Series not found" });
-    return res.status(201).json({ books: listShelf() });
+    return res.status(201).json({ books: await listShelf() });
   }
 
   return res.status(400).json({ error: "bookId or series required" });
 });
 
-app.delete("/api/shelf/:bookId", (req, res) => {
-  removeFromShelf(req.params.bookId);
-  res.json({ books: listShelf() });
+app.delete("/api/shelf/:bookId", async (req, res) => {
+  await removeFromShelf(req.params.bookId);
+  res.json({ books: await listShelf() });
 });
 
 app.get("/api/search", async (req, res) => {
@@ -83,14 +85,3 @@ app.get("/api/recommendations", async (req, res) => {
     res.status(502).json({ error: "Nie udało się pobrać rekomendacji" });
   }
 });
-
-async function main() {
-  seedIfEmpty();
-  app.listen(PORT, () => {
-    console.log(`Server listening on http://localhost:${PORT}`);
-  });
-  await enrichMissingCovers();
-  await enrichSummaries();
-}
-
-main();

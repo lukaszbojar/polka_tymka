@@ -1,0 +1,15 @@
+{
+  "name": "polka-tymka",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace=client"
+  },
+  "devDependencies": {
+    "@vercel/node": "^5.3.28"
+  }
+}

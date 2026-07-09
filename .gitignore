@@ -1,6 +1,9 @@
 node_modules/
 dist/
 .env
+.vercel
 server/data/*.sqlite
 server/data/*.sqlite-*
+server/data/*.db
+server/data/*.db-*
 .DS_Store

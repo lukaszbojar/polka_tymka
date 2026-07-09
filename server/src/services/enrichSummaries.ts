@@ -22,9 +22,9 @@ function extractDescription(source: string, rawJson: string | null): string | nu
 // Generuje streszczenie dla każdej książki, która go jeszcze nie ma — raz,
 // nie przy każdym wyświetleniu (kolejne restarty pomijają już opisane pozycje).
 export async function enrichSummaries(): Promise<void> {
-  const rows = db
+  const rows = (await db
     .prepare("SELECT id, title, author, source, raw_json FROM books WHERE summary IS NULL")
-    .all() as BookToSummarize[];
+    .all()) as BookToSummarize[];
   if (!rows.length) return;
 
   console.log(`Generowanie streszczeń dla ${rows.length} książek…`);
@@ -35,7 +35,7 @@ export async function enrichSummaries(): Promise<void> {
     try {
       const description = extractDescription(book.source, book.raw_json);
       const summary = await generateSummary(book.title, book.author, description);
-      update.run(summary, book.id);
+      await update.run(summary, book.id);
     } catch (err) {
       console.error(
         `Nie udało się wygenerować streszczenia dla "${book.title}":`,

@@ -137,9 +137,9 @@ export async function resolveBookData(
 // Publiczne wejście: sprawdza cache (TTL 30 dni), w razie trafienia odświeża
 // tylko status na półce (mógł się zmienić od czasu zapisania w cache'u).
 export async function search(query: string): Promise<SearchResult> {
-  const cached = getCachedSearch(query);
+  const cached = await getCachedSearch(query);
   if (cached) {
-    const statuses = getShelfStatuses(cached.books.map((b) => b.id));
+    const statuses = await getShelfStatuses(cached.books.map((b) => b.id));
     return {
       ...cached,
       books: cached.books.map((b) => ({
@@ -150,7 +150,7 @@ export async function search(query: string): Promise<SearchResult> {
   }
 
   const result = await performSearch(query);
-  setCachedSearch(query, result);
+  await setCachedSearch(query, result);
   return result;
 }
 
@@ -221,9 +221,9 @@ async function performSearch(query: string): Promise<SearchResult> {
     }
   }
 
-  for (const book of newBooks) upsertBook(book);
+  for (const book of newBooks) await upsertBook(book);
 
-  const statuses = getShelfStatuses(newBooks.map((b) => b.id));
+  const statuses = await getShelfStatuses(newBooks.map((b) => b.id));
 
   return {
     type: recognized.type,

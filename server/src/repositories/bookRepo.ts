@@ -46,28 +46,28 @@ function mapRow(row: BookRow): ShelfBook {
   };
 }
 
-export function listShelf(status?: ShelfStatus): ShelfBook[] {
+export async function listShelf(status?: ShelfStatus): Promise<ShelfBook[]> {
   const rows = status
-    ? (db
+    ? ((await db
         .prepare(
           `SELECT b.*, s.status FROM books b
            JOIN shelf s ON s.book_id = b.id
            WHERE s.status = ?
            ORDER BY b.series, b.series_index`
         )
-        .all(status) as BookRow[])
-    : (db
+        .all(status)) as BookRow[])
+    : ((await db
         .prepare(
           `SELECT b.*, s.status FROM books b
            JOIN shelf s ON s.book_id = b.id
            ORDER BY b.series, b.series_index`
         )
-        .all() as BookRow[]);
+        .all()) as BookRow[]);
   return rows.map(mapRow);
 }
 
-export function bookExists(id: string): boolean {
-  return !!db.prepare("SELECT 1 FROM books WHERE id = ?").get(id);
+export async function bookExists(id: string): Promise<boolean> {
+  return !!(await db.prepare("SELECT 1 FROM books WHERE id = ?").get(id));
 }
 
 const upsertShelfStatus = db.prepare(
@@ -75,25 +75,22 @@ const upsertShelfStatus = db.prepare(
    ON CONFLICT(book_id) DO UPDATE SET status = excluded.status`
 );
 
-export function addToShelf(bookId: string, status: ShelfStatus = "read"): boolean {
-  if (!bookExists(bookId)) return false;
-  upsertShelfStatus.run(bookId, status);
+export async function addToShelf(bookId: string, status: ShelfStatus = "read"): Promise<boolean> {
+  if (!(await bookExists(bookId))) return false;
+  await upsertShelfStatus.run(bookId, status);
   return true;
 }
 
-export function addSeriesToShelf(series: string, status: ShelfStatus = "read"): number {
-  const ids = db.prepare("SELECT id FROM books WHERE series = ?").all(series) as {
+export async function addSeriesToShelf(series: string, status: ShelfStatus = "read"): Promise<number> {
+  const ids = (await db.prepare("SELECT id FROM books WHERE series = ?").all(series)) as {
     id: string;
   }[];
-  const tx = db.transaction((rows: { id: string }[]) => {
-    for (const row of rows) upsertShelfStatus.run(row.id, status);
-  });
-  tx(ids);
+  for (const row of ids) await upsertShelfStatus.run(row.id, status);
   return ids.length;
 }
 
-export function removeFromShelf(bookId: string): void {
-  db.prepare("DELETE FROM shelf WHERE book_id = ?").run(bookId);
+export async function removeFromShelf(bookId: string): Promise<void> {
+  await db.prepare("DELETE FROM shelf WHERE book_id = ?").run(bookId);
 }
 
 export interface NewBook {
@@ -112,21 +109,23 @@ export interface NewBook {
 
 // Zapisuje książkę znalezioną przez wyszukiwanie (Claude + Google Books) w cache'u.
 // Jeśli już istnieje (to samo id z Google Books), zostawia istniejący wpis bez zmian.
-export function upsertBook(book: NewBook): void {
-  db.prepare(
-    `INSERT OR IGNORE INTO books
+export async function upsertBook(book: NewBook): Promise<void> {
+  await db
+    .prepare(
+      `INSERT OR IGNORE INTO books
       (id, title, author, series, series_index, arc, year, genres, cover_url, source, raw_json)
      VALUES (@id, @title, @author, @series, @seriesIndex, @arc, @year, @genres, @coverUrl, @source, @rawJson)`
-  ).run({ ...book, genres: JSON.stringify(book.genres) });
+    )
+    .run({ ...book, genres: JSON.stringify(book.genres) });
 }
 
 // Mapa id -> status ('read'/'want') dla podanych książek, do oznaczania
 // przycisków dodawania w wynikach wyszukiwania/rekomendacji.
-export function getShelfStatuses(ids: string[]): Map<string, string> {
+export async function getShelfStatuses(ids: string[]): Promise<Map<string, string>> {
   if (!ids.length) return new Map();
   const placeholders = ids.map(() => "?").join(",");
-  const rows = db
+  const rows = (await db
     .prepare(`SELECT book_id, status FROM shelf WHERE book_id IN (${placeholders})`)
-    .all(...ids) as { book_id: string; status: string }[];
+    .all(...ids)) as { book_id: string; status: string }[];
   return new Map(rows.map((r) => [r.book_id, r.status]));
 }
