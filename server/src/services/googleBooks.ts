@@ -28,13 +28,17 @@ interface GoogleVolumeItem {
 
 export async function searchGoogleBooks(
   query: string,
-  maxResults = 5
+  maxResults = 5,
+  langRestrict?: string
 ): Promise<GoogleBooksResult[]> {
   const params = new URLSearchParams({
     q: query,
     maxResults: String(maxResults),
     country: "PL",
   });
+  if (langRestrict) {
+    params.set("langRestrict", langRestrict);
+  }
   if (process.env.GOOGLE_BOOKS_API_KEY) {
     params.set("key", process.env.GOOGLE_BOOKS_API_KEY);
   }
@@ -42,7 +46,7 @@ export async function searchGoogleBooks(
   const res = await fetchWithRetry(`${API_BASE}?${params}`);
   const data = (await res.json()) as { items?: GoogleVolumeItem[] };
 
-  return (data.items ?? []).map((item) => {
+  const results = (data.items ?? []).map((item) => {
     const info = item.volumeInfo ?? {};
     const yearMatch = info.publishedDate?.match(/^\d{4}/);
     const thumbnail = info.imageLinks?.thumbnail ?? info.imageLinks?.smallThumbnail ?? null;
@@ -58,4 +62,9 @@ export async function searchGoogleBooks(
       language: info.language ?? null,
     };
   });
+
+  // langRestrict jest w Google Books API tylko luźną wskazówką, nie twardym
+  // filtrem — API i tak potrafi zwrócić wyniki w innym języku, więc filtrujemy
+  // to jeszcze raz po naszej stronie.
+  return langRestrict ? results.filter((r) => r.language === langRestrict) : results;
 }

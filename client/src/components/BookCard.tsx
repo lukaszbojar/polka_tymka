@@ -16,7 +16,7 @@ export function BookCard({
   const showImage = book.coverUrl && !imgFailed;
 
   return (
-    <div className={`book${belowAction ? " book--with-action" : ""}`} title={book.summary ?? undefined}>
+    <div className="book" title={book.summary ?? undefined}>
       <div className="cover" style={{ background: color }}>
         <button className="rm" title="Usuń z półki" onClick={() => onRemove(book.id)}>
           &times;
@@ -40,6 +40,7 @@ export function BookCard({
           </>
         )}
       </div>
+      <div className="book-label">{book.title}</div>
       {belowAction && (
         <button className="book-below-btn" onClick={() => belowAction.onClick(book.id)}>
           {belowAction.label}

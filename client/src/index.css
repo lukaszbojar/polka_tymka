@@ -457,9 +457,11 @@ body {
 .book {
   position: relative;
   width: 118px;
-  height: 174px;
+  height: auto;
   --book-h: 174px;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
   transform-origin: bottom center;
   transition: transform 0.18s ease;
 }
@@ -467,8 +469,9 @@ body {
   transform: translateY(-8px);
 }
 .book .cover {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  height: var(--book-h);
+  flex-shrink: 0;
   border-radius: 2px 4px 4px 2px;
   color: #fff;
   padding: 14px 12px;
@@ -571,7 +574,6 @@ body {
   }
   .book {
     width: 100px;
-    height: 150px;
     --book-h: 150px;
   }
 }
@@ -760,15 +762,18 @@ body {
   border-radius: 10px;
 }
 
-.book--with-action {
-  height: auto;
-  display: flex;
-  flex-direction: column;
-}
-.book--with-action .cover {
-  position: relative;
-  height: var(--book-h);
-  flex-shrink: 0;
+.book-label {
+  margin-top: 6px;
+  font-family: "Fraunces", serif;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--ink);
+  text-align: center;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .book-below-btn {
   margin-top: 6px;
