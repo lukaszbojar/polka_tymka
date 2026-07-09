@@ -54,7 +54,7 @@ async function findCover(title: string, author: string): Promise<FoundCover> {
 
   let olFailed = false;
   try {
-    const olResults = await searchOpenLibraryPolish(title, author, 5);
+    const olResults = await searchOpenLibraryPolish(title, title, author);
     const olMatch = olResults.find((r) => r.coverUrl) ?? olResults[0] ?? null;
     if (olMatch?.coverUrl) {
       return { coverUrl: olMatch.coverUrl, source: "openlibrary", rawJson: JSON.stringify(olMatch) };

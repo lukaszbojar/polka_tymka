@@ -102,55 +102,21 @@ function bestGoogleMatch(
   return byPolish ?? byOriginal;
 }
 
-// Ich znacznik language:pol bywa błędny na pojedynczych rekordach — odrzucamy
-// dopasowanie, którego tytuł jest w praktyce identyczny z oryginałem
-// angielskim (silny sygnał błędnego otagowania, a nie prawdziwego
-// tłumaczenia), niezależnie z którego zapytania pochodzi.
-function rejectIfEnglish<T extends { title: string }>(match: T | null, originalTitle: string): T | null {
-  if (match && titlesMatch(match.title, originalTitle)) return null;
-  return match;
-}
-
+// searchOpenLibraryPolish (patrz openLibrary.ts) próbuje dwóch strategii i
+// zwraca już tylko wiarygodnie polskie, odfiltrowane po trafności tytułu
+// wyniki — tu tylko wykluczamy już wykorzystane i preferujemy z okładką.
 async function findOpenLibraryMatch(
   originalTitle: string,
   polishTitleGuess: string,
   fallbackAuthor: string,
   usedOpenLibraryKeys: Set<string>
 ) {
-  const olPreference = (r: { coverUrl: string | null }) => (r.coverUrl ? 1 : 0);
+  const candidates = (await searchOpenLibraryPolish(originalTitle, polishTitleGuess, fallbackAuthor)).filter(
+    (c) => !usedOpenLibraryKeys.has(c.workKey)
+  );
+  if (!candidates.length) return null;
 
-  const primaryCandidates = await searchOpenLibraryPolish(polishTitleGuess, fallbackAuthor);
-  const primaryMatch = rejectIfEnglish(
-    pickClosest(
-      primaryCandidates,
-      polishTitleGuess,
-      (r) => r.title,
-      (r) => r.workKey || r.title,
-      olPreference,
-      usedOpenLibraryKeys
-    ),
-    originalTitle
-  );
-  if (primaryMatch || polishTitleGuess === originalTitle) return primaryMatch;
-
-  // Open Library indeksuje wydania pod ich WŁASNYM tytułem, więc zapytanie
-  // angielskim tytułem czasem trafia polskie wydanie, którego nie znalazło
-  // zapytanie polską zgadywanką (inne słowa w metadanych/tekście rekordu).
-  const fallbackCandidates = await searchOpenLibraryPolish(originalTitle, fallbackAuthor).catch(
-    () => [] as typeof primaryCandidates
-  );
-  const fallbackMatch = rejectIfEnglish(
-    pickClosest(
-      fallbackCandidates,
-      originalTitle,
-      (r) => r.title,
-      (r) => r.workKey || r.title,
-      olPreference,
-      usedOpenLibraryKeys
-    ),
-    originalTitle
-  );
-  return fallbackMatch;
+  return [...candidates].sort((a, b) => (b.coverUrl ? 1 : 0) - (a.coverUrl ? 1 : 0))[0];
 }
 
 // Kolejność źródeł danych o książce, ściśle: 1) Google Books — TYLKO wydania
