@@ -458,6 +458,7 @@ body {
   position: relative;
   width: 118px;
   height: 174px;
+  --book-h: 174px;
   flex-shrink: 0;
   transform-origin: bottom center;
   transition: transform 0.18s ease;
@@ -571,6 +572,7 @@ body {
   .book {
     width: 100px;
     height: 150px;
+    --book-h: 150px;
   }
 }
 
@@ -637,17 +639,68 @@ body {
 .btn-secondary:hover {
   background: var(--sidebar-line);
 }
+.btn-muted {
+  background: transparent;
+  color: #b5543a;
+  border: 1px solid rgba(181, 84, 58, 0.4);
+}
+.btn-muted:hover {
+  background: rgba(181, 84, 58, 0.08);
+}
+.btn-muted:disabled {
+  background: transparent;
+  border-color: var(--sidebar-line);
+  color: var(--ink-soft);
+}
+
+.load-more-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 32px;
+}
+.load-more-btn {
+  font-size: 15px;
+  padding: 12px 28px;
+  border-radius: 10px;
+}
+
+.book--with-action {
+  height: auto;
+  display: flex;
+  flex-direction: column;
+}
+.book--with-action .cover {
+  position: relative;
+  height: var(--book-h);
+  flex-shrink: 0;
+}
+.book-below-btn {
+  margin-top: 6px;
+  width: 100%;
+  font-family: "Inter", sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  color: #fff;
+  background: var(--moss);
+  border: none;
+  border-radius: 6px;
+  padding: 6px 4px;
+  cursor: pointer;
+}
+.book-below-btn:hover {
+  background: var(--moss-deep);
+}
 
 .large-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 16px;
 }
 .large-card {
   background: #fff;
-  border-radius: 14px;
+  border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
 }
@@ -670,44 +723,48 @@ body {
 .large-card-fallback {
   font-family: "Fraunces", serif;
   font-weight: 600;
-  font-size: 18px;
+  font-size: 13px;
   color: #fff;
   text-align: center;
-  padding: 20px;
+  padding: 14px;
 }
 .large-card-body {
-  padding: 16px;
+  padding: 11px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   flex: 1;
 }
 .large-card-title {
   font-family: "Fraunces", serif;
   font-weight: 700;
-  font-size: 17px;
+  font-size: 13px;
   color: var(--ink);
   line-height: 1.25;
 }
 .large-card-meta {
   font-family: "IBM Plex Mono", monospace;
-  font-size: 12px;
+  font-size: 10px;
   color: var(--ink-soft);
 }
 .large-card-summary {
-  font-size: 13px;
+  font-size: 11px;
   color: var(--ink);
-  line-height: 1.4;
-  margin: 4px 0;
+  line-height: 1.35;
+  margin: 3px 0;
 }
 .large-card-series-summary {
   color: var(--ink-soft);
-  font-size: 12px;
+  font-size: 10px;
 }
 .large-card-actions {
   display: flex;
-  gap: 8px;
+  gap: 5px;
   margin-top: auto;
-  padding-top: 8px;
+  padding-top: 6px;
   flex-wrap: wrap;
+}
+.large-card-actions .btn {
+  font-size: 10px;
+  padding: 5px 8px;
 }

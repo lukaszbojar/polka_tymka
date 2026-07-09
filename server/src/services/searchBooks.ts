@@ -16,7 +16,7 @@ export interface SearchResultBook {
   year: number;
   genres: string[];
   coverUrl: string | null;
-  shelfStatus: "read" | "want" | null;
+  shelfStatus: "read" | "want" | "not_interested" | null;
 }
 
 export interface SearchResult {
@@ -28,14 +28,15 @@ export interface SearchResult {
 
 // Wśród kandydatów pasujących do tytułu wybiera ten o najkrótszym, najbliższym
 // dopasowaniu (odrzuca "poradniki"/"analizy książki", które są dłuższym
-// tekstem zawierającym oryginalny tytuł jako podciąg), preferując okładkę.
+// tekstem zawierającym oryginalny tytuł jako podciąg), a wśród nich ten
+// z najwyższym `preference` (np. polskie wydanie z okładką > okładka > nic).
 // Generyczne — działa zarówno dla wyników Google Books, jak i Open Library.
 function pickClosest<T>(
   items: T[],
   targetTitle: string,
   getTitle: (item: T) => string,
   getKey: (item: T) => string,
-  hasCover: (item: T) => boolean,
+  preference: (item: T) => number,
   exclude: Set<string>
 ): T | null {
   const matches = items
@@ -46,7 +47,8 @@ function pickClosest<T>(
   if (!matches.length) return null;
   const minLen = matches[0].len;
   const closest = matches.filter((m) => m.len <= minLen + 10);
-  return (closest.find((m) => hasCover(m.item)) ?? closest[0]).item;
+  closest.sort((a, b) => preference(b.item) - preference(a.item));
+  return closest[0].item;
 }
 
 interface ResolvedBook {
@@ -63,7 +65,7 @@ interface ResolvedBook {
 // Kolejność źródeł danych o książce: 1) Google Books, 2) Open Library (lepsze
 // pokrycie polskich wydań), 3) dopiero gdy obu brak — wiedza własna Claude
 // (tytuł/rok/autor już ustalone wcześniej), bez okładki.
-async function resolveBookData(
+export async function resolveBookData(
   targetTitle: string,
   fallbackAuthor: string,
   fallbackYear: number,
@@ -76,7 +78,7 @@ async function resolveBookData(
     targetTitle,
     (c) => c.title,
     (c) => c.volumeId,
-    (c) => !!c.thumbnail,
+    (c) => (c.thumbnail ? 1 : 0) + (c.thumbnail && c.language === "pl" ? 1 : 0),
     usedGoogleIds
   );
   if (gbMatch) {
@@ -100,7 +102,7 @@ async function resolveBookData(
       targetTitle,
       (r) => r.title,
       (r) => r.workKey || r.title,
-      (r) => !!r.coverUrl,
+      (r) => (r.coverUrl ? 1 : 0),
       usedOpenLibraryKeys
     );
     if (olMatch) {
@@ -142,7 +144,7 @@ export async function search(query: string): Promise<SearchResult> {
       ...cached,
       books: cached.books.map((b) => ({
         ...b,
-        shelfStatus: (statuses.get(b.id) as "read" | "want" | undefined) ?? null,
+        shelfStatus: (statuses.get(b.id) as "read" | "want" | "not_interested" | undefined) ?? null,
       })),
     };
   }
@@ -239,7 +241,7 @@ async function performSearch(query: string): Promise<SearchResult> {
         year: b.year,
         genres: b.genres,
         coverUrl: b.coverUrl,
-        shelfStatus: (statuses.get(b.id) as "read" | "want" | undefined) ?? null,
+        shelfStatus: (statuses.get(b.id) as "read" | "want" | "not_interested" | undefined) ?? null,
       })),
   };
 }

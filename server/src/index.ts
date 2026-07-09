@@ -12,7 +12,10 @@ import {
   addToShelf,
   listShelf,
   removeFromShelf,
+  type ShelfStatus,
 } from "./repositories/bookRepo";
+
+const SHELF_STATUSES: ShelfStatus[] = ["read", "want", "not_interested"];
 
 dotenv.config({ path: path.join(__dirname, "..", ".env") });
 
@@ -27,13 +30,15 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.get("/api/shelf", (req, res) => {
-  const status = req.query.status === "want" || req.query.status === "read" ? req.query.status : undefined;
+  const status = SHELF_STATUSES.includes(req.query.status as ShelfStatus)
+    ? (req.query.status as ShelfStatus)
+    : undefined;
   res.json({ books: listShelf(status) });
 });
 
 app.post("/api/shelf", (req, res) => {
   const { bookId, series, status } = req.body ?? {};
-  const shelfStatus = status === "want" ? "want" : "read";
+  const shelfStatus: ShelfStatus = SHELF_STATUSES.includes(status) ? status : "read";
 
   if (bookId) {
     const ok = addToShelf(bookId, shelfStatus);

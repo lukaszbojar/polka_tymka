@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { Bookcase } from "../components/Bookcase";
-import { addBookToShelf, fetchShelf, removeFromShelf } from "../lib/api";
+import { fetchShelf, removeFromShelf } from "../lib/api";
 import type { Book } from "../types/book";
 
-export function ToReadTab() {
+export function NotInterestedTab() {
   const [books, setBooks] = useState<Book[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchShelf("want")
+    fetchShelf("not_interested")
       .then(setBooks)
       .catch((err) => setError(err.message));
   }, []);
@@ -24,29 +24,9 @@ export function ToReadTab() {
     }
   }
 
-  async function handleMarkRead(bookId: string) {
-    const previous = books;
-    setBooks((current) => current?.filter((b) => b.id !== bookId) ?? current);
-    try {
-      await addBookToShelf(bookId, "read");
-    } catch (err) {
-      setBooks(previous);
-      setError((err as Error).message);
-    }
-  }
-
   if (error) {
     return <div className="empty">Nie udało się połączyć z serwerem: {error}</div>;
   }
 
-  return (
-    <Bookcase
-      books={books ?? []}
-      onRemove={handleRemove}
-      filter={null}
-      onFilterChange={() => {}}
-      belowActionLabel="Przeczytane — do półki"
-      onBelowAction={handleMarkRead}
-    />
-  );
+  return <Bookcase books={books ?? []} onRemove={handleRemove} filter={null} onFilterChange={() => {}} />;
 }

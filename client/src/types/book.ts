@@ -1,3 +1,5 @@
+import type { ShelfStatus } from "./shelfStatus";
+
 export interface Book {
   id: string;
   title: string;
@@ -9,5 +11,5 @@ export interface Book {
   genres: string[];
   coverUrl: string | null;
   summary: string | null;
-  status: "read" | "want";
+  status: ShelfStatus;
 }

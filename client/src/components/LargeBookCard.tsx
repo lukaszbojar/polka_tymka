@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { ShelfStatus } from "../types/shelfStatus";
 import { fallbackColor } from "../lib/fallbackColor";
 
 export function LargeBookCard({
@@ -10,6 +11,7 @@ export function LargeBookCard({
   shelfStatus,
   onAddRead,
   onAddWant,
+  onDismiss,
   children,
 }: {
   title: string;
@@ -17,9 +19,10 @@ export function LargeBookCard({
   year: number;
   series: string | null;
   coverUrl: string | null;
-  shelfStatus: "read" | "want" | null;
+  shelfStatus: ShelfStatus | null;
   onAddRead: () => void;
   onAddWant: () => void;
+  onDismiss: () => void;
   children?: ReactNode;
 }) {
   const color = fallbackColor(series ?? title);
@@ -44,7 +47,14 @@ export function LargeBookCard({
             disabled={shelfStatus === "want"}
             onClick={onAddWant}
           >
-            {shelfStatus === "want" ? "Do przeczytania ✓" : "+ Do przeczytania"}
+            {shelfStatus === "want" ? "Później ✓" : "+ Później"}
+          </button>
+          <button
+            className="btn btn-muted"
+            disabled={shelfStatus === "not_interested"}
+            onClick={onDismiss}
+          >
+            {shelfStatus === "not_interested" ? "Odrzucona" : "Nie interesuje mnie"}
           </button>
         </div>
       </div>

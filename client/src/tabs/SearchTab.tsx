@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { SearchResult } from "../types/searchResult";
+import type { ShelfStatus } from "../types/shelfStatus";
 import { addBookToShelf, addSeriesToShelf, searchBooks } from "../lib/api";
 import { LargeBookCard } from "../components/LargeBookCard";
 
@@ -24,7 +25,7 @@ export function SearchTab() {
     }
   }
 
-  function setBookStatus(bookId: string, status: "read" | "want") {
+  function setBookStatus(bookId: string, status: ShelfStatus) {
     setResult((cur) =>
       cur
         ? { ...cur, books: cur.books.map((b) => (b.id === bookId ? { ...b, shelfStatus: status } : b)) }
@@ -32,7 +33,7 @@ export function SearchTab() {
     );
   }
 
-  async function handleAdd(bookId: string, status: "read" | "want") {
+  async function handleAdd(bookId: string, status: ShelfStatus) {
     try {
       await addBookToShelf(bookId, status);
       setBookStatus(bookId, status);
@@ -41,7 +42,7 @@ export function SearchTab() {
     }
   }
 
-  async function handleAddSeries(status: "read" | "want") {
+  async function handleAddSeries(status: ShelfStatus) {
     if (!result?.seriesName) return;
     try {
       await addSeriesToShelf(result.seriesName, status);
@@ -101,6 +102,7 @@ export function SearchTab() {
               shelfStatus={b.shelfStatus}
               onAddRead={() => handleAdd(b.id, "read")}
               onAddWant={() => handleAdd(b.id, "want")}
+              onDismiss={() => handleAdd(b.id, "not_interested")}
             />
           ))}
         </div>

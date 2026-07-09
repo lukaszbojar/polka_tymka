@@ -1,5 +1,7 @@
 import { db } from "../db";
 
+export type ShelfStatus = "read" | "want" | "not_interested";
+
 interface BookRow {
   id: string;
   title: string;
@@ -44,7 +46,7 @@ function mapRow(row: BookRow): ShelfBook {
   };
 }
 
-export function listShelf(status?: "read" | "want"): ShelfBook[] {
+export function listShelf(status?: ShelfStatus): ShelfBook[] {
   const rows = status
     ? (db
         .prepare(
@@ -73,13 +75,13 @@ const upsertShelfStatus = db.prepare(
    ON CONFLICT(book_id) DO UPDATE SET status = excluded.status`
 );
 
-export function addToShelf(bookId: string, status: "read" | "want" = "read"): boolean {
+export function addToShelf(bookId: string, status: ShelfStatus = "read"): boolean {
   if (!bookExists(bookId)) return false;
   upsertShelfStatus.run(bookId, status);
   return true;
 }
 
-export function addSeriesToShelf(series: string, status: "read" | "want" = "read"): number {
+export function addSeriesToShelf(series: string, status: ShelfStatus = "read"): number {
   const ids = db.prepare("SELECT id FROM books WHERE series = ?").all(series) as {
     id: string;
   }[];

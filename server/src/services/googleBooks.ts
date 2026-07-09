@@ -10,6 +10,7 @@ export interface GoogleBooksResult {
   categories: string[];
   thumbnail: string | null;
   description: string | null;
+  language: string | null;
 }
 
 interface GoogleVolumeItem {
@@ -21,6 +22,7 @@ interface GoogleVolumeItem {
     categories?: string[];
     description?: string;
     imageLinks?: { thumbnail?: string; smallThumbnail?: string };
+    language?: string;
   };
 }
 
@@ -53,6 +55,7 @@ export async function searchGoogleBooks(
       categories: info.categories ?? [],
       thumbnail: thumbnail ? thumbnail.replace(/^http:/, "https:") : null,
       description: info.description ?? null,
+      language: info.language ?? null,
     };
   });
 }

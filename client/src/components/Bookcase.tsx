@@ -10,11 +10,15 @@ export function Bookcase({
   onRemove,
   filter,
   onFilterChange,
+  belowActionLabel,
+  onBelowAction,
 }: {
   books: Book[];
   onRemove: (bookId: string) => void;
   filter: ShelfFilter | null;
   onFilterChange: (filter: ShelfFilter | null) => void;
+  belowActionLabel?: string;
+  onBelowAction?: (bookId: string) => void;
 }) {
   const filtered = filter
     ? books.filter((b) =>
@@ -62,7 +66,16 @@ export function Bookcase({
               <div key={i}>
                 <div className="books">
                   {row.map((book) => (
-                    <BookCard key={book.id} book={book} onRemove={onRemove} />
+                    <BookCard
+                      key={book.id}
+                      book={book}
+                      onRemove={onRemove}
+                      belowAction={
+                        belowActionLabel && onBelowAction
+                          ? { label: belowActionLabel, onClick: onBelowAction }
+                          : undefined
+                      }
+                    />
                   ))}
                 </div>
                 <div className="plank" />

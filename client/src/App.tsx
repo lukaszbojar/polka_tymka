@@ -2,14 +2,16 @@ import { useState } from "react";
 import { ShelfTab } from "./tabs/ShelfTab";
 import { SearchTab } from "./tabs/SearchTab";
 import { ToReadTab } from "./tabs/ToReadTab";
+import { NotInterestedTab } from "./tabs/NotInterestedTab";
 import { RecommendTab } from "./tabs/RecommendTab";
 
-type Tab = "shelf" | "search" | "toread" | "recommend";
+type Tab = "shelf" | "search" | "toread" | "notinterested" | "recommend";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "shelf", label: "Półka" },
   { id: "search", label: "Wyszukiwanie" },
   { id: "toread", label: "Do przeczytania" },
+  { id: "notinterested", label: "Nie interesuje mnie" },
   { id: "recommend", label: "Poleć mi" },
 ];
 
@@ -33,6 +35,7 @@ export default function App() {
         {tab === "shelf" && <ShelfTab />}
         {tab === "search" && <SearchTab />}
         {tab === "toread" && <ToReadTab />}
+        {tab === "notinterested" && <NotInterestedTab />}
         {tab === "recommend" && <RecommendTab />}
       </div>
     </div>

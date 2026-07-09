@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Recommendation } from "../types/recommendation";
+import type { ShelfStatus } from "../types/shelfStatus";
 import { addBookToShelf, fetchRecommendations } from "../lib/api";
 import { LargeBookCard } from "../components/LargeBookCard";
 
@@ -9,7 +10,7 @@ export function RecommendTab() {
   const [loading, setLoading] = useState(false);
   const [started, setStarted] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [statuses, setStatuses] = useState<Record<string, "read" | "want">>({});
+  const [statuses, setStatuses] = useState<Record<string, ShelfStatus>>({});
 
   async function load(offset: number) {
     setLoading(true);
@@ -26,7 +27,7 @@ export function RecommendTab() {
     }
   }
 
-  async function handleAdd(bookId: string, status: "read" | "want") {
+  async function handleAdd(bookId: string, status: ShelfStatus) {
     try {
       await addBookToShelf(bookId, status);
       setStatuses((prev) => ({ ...prev, [bookId]: status }));
@@ -65,6 +66,7 @@ export function RecommendTab() {
             shelfStatus={statuses[item.id] ?? null}
             onAddRead={() => handleAdd(item.id, "read")}
             onAddWant={() => handleAdd(item.id, "want")}
+            onDismiss={() => handleAdd(item.id, "not_interested")}
           >
             {item.summary && <p className="large-card-summary">{item.summary}</p>}
             {item.seriesSummary && (
@@ -76,9 +78,11 @@ export function RecommendTab() {
         ))}
       </div>
       {hasMore && (
-        <button className="btn" onClick={() => load(items.length)} disabled={loading}>
-          {loading ? "Ładuję…" : "Pokaż więcej"}
-        </button>
+        <div className="load-more-wrap">
+          <button className="btn load-more-btn" onClick={() => load(items.length)} disabled={loading}>
+            {loading ? "Ładuję…" : "Pokaż więcej propozycji"}
+          </button>
+        </div>
       )}
     </div>
   );

@@ -17,16 +17,21 @@ interface FoundCover {
 // Wydania z dokładnym dopasowaniem tytułu/autora często nie mają okładki w
 // Google Books (zwłaszcza polskie tłumaczenia) — jeśli żaden wynik precyzyjnego
 // zapytania jej nie ma, próbujemy luźniejszego zapytania jako fallback.
+// Wśród wyników z okładką najpierw polskie wydanie, dopiero potem dowolne.
+function pickByLanguage(results: GoogleBooksResult[]): GoogleBooksResult | undefined {
+  return results.find((r) => r.thumbnail && r.language === "pl") ?? results.find((r) => r.thumbnail);
+}
+
 async function findGoogleBooksMatch(
   title: string,
   author: string
 ): Promise<GoogleBooksResult | null> {
   const precise = await searchGoogleBooks(`intitle:${title} inauthor:${author}`, 10);
-  const withCover = precise.find((r) => r.thumbnail);
-  if (withCover) return withCover;
+  const preciseMatch = pickByLanguage(precise);
+  if (preciseMatch) return preciseMatch;
 
   const loose = await searchGoogleBooks(`${title} ${author}`, 10);
-  return loose.find((r) => r.thumbnail) ?? precise[0] ?? loose[0] ?? null;
+  return pickByLanguage(loose) ?? precise[0] ?? loose[0] ?? null;
 }
 
 // Kolejność źródeł: najpierw Google Books, a gdy nie da okładki — Open Library

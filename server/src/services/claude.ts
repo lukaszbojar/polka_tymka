@@ -170,6 +170,74 @@ export async function generateSummary(
   return block.text.trim();
 }
 
+export interface BookSuggestion {
+  title: string;
+  author: string;
+  year: number;
+  genres: string[];
+}
+
+// Prosi Claude o nowe propozycje książek na podstawie półki dziecka (gatunki/autorzy
+// lubiani z "przeczytane"/"do przeczytania", unikać cech z "nie interesuje mnie").
+// excludeTitles = wszystko, co już jest na półce lub było już zaproponowane —
+// żeby kolejne kliknięcia "Pokaż więcej" dawały naprawdę nowe, unikalne pozycje.
+export async function suggestMoreBooks(
+  shelfSummary: string,
+  excludeTitles: string[],
+  count: number
+): Promise<BookSuggestion[]> {
+  const response = await getClient().messages.create({
+    model: MODEL,
+    max_tokens: 2000,
+    thinking: { type: "adaptive" },
+    system:
+      "Na podstawie półki dziecka (8-12 lat) zaproponuj NOWE, prawdziwe, istniejące książki " +
+      "lub serie (jeśli seria — podaj pierwszy tom), które prawdopodobnie mu się spodobają. " +
+      "Kieruj się gatunkami i autorami z pozycji oznaczonych jako przeczytane/do przeczytania, " +
+      "a unikaj cech pozycji oznaczonych jako 'nie interesuje mnie'. Najlepiej książki mające " +
+      "polskie wydanie. Nigdy nie proponuj tytułu z listy 'excludeTitles' — to książki, które " +
+      "dziecko już ma, odrzuciło albo już mu zaproponowano.",
+    messages: [
+      {
+        role: "user",
+        content:
+          `Półka:\n${shelfSummary || "(pusta)"}\n\n` +
+          `Pomiń te tytuły (już znane):\n${excludeTitles.join("; ") || "(brak)"}\n\n` +
+          `Zaproponuj ${count} nowych, różnorodnych tytułów.`,
+      },
+    ],
+    output_config: {
+      format: {
+        type: "json_schema",
+        schema: {
+          type: "object",
+          properties: {
+            suggestions: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  title: { type: "string" },
+                  author: { type: "string" },
+                  year: { type: "integer" },
+                  genres: { type: "array", items: { type: "string" } },
+                },
+                required: ["title", "author", "year", "genres"],
+                additionalProperties: false,
+              },
+            },
+          },
+          required: ["suggestions"],
+          additionalProperties: false,
+        },
+      },
+    },
+  });
+
+  const { suggestions } = extractJson<{ suggestions: BookSuggestion[] }>(response);
+  return suggestions;
+}
+
 // Krótki opis całej serii (1-2 zdania) — o czym jest, nie tylko pierwszy tom.
 export async function generateSeriesSummary(series: string, author: string): Promise<string> {
   const response = await getClient().messages.create({

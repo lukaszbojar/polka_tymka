@@ -1,3 +1,5 @@
+import type { ShelfStatus } from "./shelfStatus";
+
 export interface SearchResultBook {
   id: string;
   title: string;
@@ -8,7 +10,7 @@ export interface SearchResultBook {
   year: number;
   genres: string[];
   coverUrl: string | null;
-  shelfStatus: "read" | "want" | null;
+  shelfStatus: ShelfStatus | null;
 }
 
 export interface SearchResult {
