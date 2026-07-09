@@ -158,7 +158,7 @@ async function performSearch(query: string): Promise<SearchResult> {
   const recognized = await recognizeQuery(query);
   let candidates: GoogleBooksResult[] = [];
   try {
-    candidates = await searchGoogleBooks(recognized.searchQuery, 20);
+    candidates = await searchGoogleBooks(recognized.searchQuery, 40);
   } catch (err) {
     console.error("Google Books niedostępne, lecę dalej na Open Library:", (err as Error).message);
   }

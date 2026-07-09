@@ -91,15 +91,23 @@ export async function orderSeriesVolumes(
     max_tokens: 16000,
     thinking: { type: "adaptive" },
     system:
-      `Uporządkuj pełną listę tomów serii "${seriesName}" (${author}) na podstawie swojej ` +
+      `Uporządkuj KOMPLETNĄ listę tomów serii "${seriesName}" (${author}) na podstawie swojej ` +
       "wiedzy — niezależnie od tego, czy poniższa lista pomocnicza z Google Books jest pełna, " +
       "niepełna czy pusta (może brakować wyników, np. z powodu awarii zewnętrznego API). " +
-      "Wypisz WSZYSTKIE tomy głównej serii, uporządkuj je chronologicznie (kolejność " +
-      "wydania/czytania), i przypisz każdemu seriesIndex (od 1) oraz arc — nazwę podcyklu, " +
-      'jeśli seria jest podzielona na podcykle (np. "Seria 1 · ...") lub pusty string "" jeśli ' +
-      'seria nie ma podcykli. Pole "title" podaj w polskim tłumaczeniu, jeśli takie istnieje ' +
-      "(inaczej w oryginale). Lista pomocnicza poniżej służy tylko do ewentualnego dopasowania " +
-      "pisowni tytułów — jej brak lub niekompletność NIE oznacza, że tomu nie ma w serii.\n\n" +
+      "To częsty błąd: wymienienie tylko pierwszych/najbardziej znanych tomów i pominięcie " +
+      "nowszych kontynuacji, dodatkowych podcykli (np. prequeli, spin-offów wydawanych pod tą " +
+      "samą marką) wydanych w kolejnych latach — WYPISZ WSZYSTKIE z nich, nawet jeśli seria ma " +
+      "kilkanaście-kilkadziesiąt tomów łącznie z podcyklami. Nie ograniczaj się do jednego, " +
+      '"głównego" podcyklu, jeśli pod tą nazwą serii wydawane są też inne (np. prequele czy ' +
+      "kontynuacje innego autora numeracji) — o ile są częścią tej samej marki wydawniczej, " +
+      "uwzględnij je i opisz przez pole arc. Uporządkuj tomy chronologicznie (kolejność " +
+      "wydania/czytania), i przypisz każdemu seriesIndex (od 1, ciągłe przez całą markę) oraz " +
+      'arc — nazwę podcyklu (np. "Seria główna", "Wczesne lata"/prequele, itp.) lub pusty ' +
+      'string "" jeśli seria nie ma podcykli. Pole "title" podaj w polskim tłumaczeniu, jeśli ' +
+      "takie istnieje (inaczej w oryginale). Lista pomocnicza poniżej służy tylko do " +
+      "ewentualnego dopasowania pisowni tytułów — jej brak lub niekompletność NIE oznacza, że " +
+      "tomu nie ma w serii, ale jeśli lista pomocnicza zawiera tytuły, których nie uwzględniłeś " +
+      "z pamięci, prawdopodobnie należą do serii i też powinny się znaleźć w odpowiedzi.\n\n" +
       "Lista pomocnicza z Google Books:",
     messages: [{ role: "user", content: candidateList || "(brak kandydatów z Google Books)" }],
     output_config: {
