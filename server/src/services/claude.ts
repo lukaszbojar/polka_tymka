@@ -63,6 +63,7 @@ export async function recognizeQuery(query: string): Promise<RecognizedQuery> {
 }
 
 export interface OrderedVolume {
+  originalTitle: string;
   title: string;
   year: number;
   seriesIndex: number;
@@ -103,12 +104,22 @@ export async function orderSeriesVolumes(
       "uwzględnij je i opisz przez pole arc. Uporządkuj tomy chronologicznie (kolejność " +
       "wydania/czytania), i przypisz każdemu seriesIndex (od 1, ciągłe przez całą markę) oraz " +
       'arc — nazwę podcyklu (np. "Seria główna", "Wczesne lata"/prequele, itp.) lub pusty ' +
-      'string "" jeśli seria nie ma podcykli. Pole "title" podaj w polskim tłumaczeniu, jeśli ' +
-      "takie istnieje (inaczej w oryginale). Lista pomocnicza poniżej służy tylko do " +
-      "ewentualnego dopasowania pisowni tytułów — jej brak lub niekompletność NIE oznacza, że " +
-      "tomu nie ma w serii, ale jeśli lista pomocnicza zawiera tytuły, których nie uwzględniłeś " +
-      "z pamięci, prawdopodobnie należą do serii i też powinny się znaleźć w odpowiedzi.\n\n" +
-      "Lista pomocnicza z Google Books:",
+      'string "" jeśli seria nie ma podcykli. Pole "originalTitle" to tytuł oryginalny (w ' +
+      "języku, w jakim książka została pierwotnie wydana) — to pole musi być precyzyjne, będzie " +
+      "użyte do wyszukania prawdziwego wydania w katalogach księgarskich. Pole \"title\" to " +
+      "NAJLEPIEJ ZNANY CI oficjalny tytuł polskiego wydania (dokładnie taki, jaki nadał polski " +
+      "wydawca) — NIE twórz własnego dosłownego tłumaczenia z angielskiego, to częsty błąd " +
+      '(np. błędne "Bitwa pod Hackham Heath" zamiast prawdziwego polskiego tytułu wydania ' +
+      '"Pojedynek w Araluenie"). Jeśli nie jesteś pewien dokładnego, oficjalnie wydanego ' +
+      'polskiego tytułu, ustaw "title" na tę samą wartość co "originalTitle" zamiast zgadywać ' +
+      "— zostanie i tak podmienione prawdziwym tytułem znalezionym w katalogu, jeśli polskie " +
+      "wydanie istnieje. Lista pomocnicza poniżej (jeśli niepusta) pochodzi z prawdziwego " +
+      "katalogu księgarskiego — jej tytuły są wiarygodniejsze niż Twoja pamięć, więc jeśli " +
+      "któryś kandydat wyraźnie odpowiada tomowi, którego szukasz, wolej jego pisownię tytułu " +
+      "(oryginalnego) od własnej rekonstrukcji z pamięci. Jej brak lub niekompletność NIE " +
+      "oznacza, że tomu nie ma w serii, ale jeśli lista pomocnicza zawiera tytuły, których nie " +
+      "uwzględniłeś z pamięci, prawdopodobnie należą do serii i też powinny się znaleźć w " +
+      "odpowiedzi.\n\nLista pomocnicza z Google Books:",
     messages: [{ role: "user", content: candidateList || "(brak kandydatów z Google Books)" }],
     output_config: {
       format: {
@@ -121,12 +132,13 @@ export async function orderSeriesVolumes(
               items: {
                 type: "object",
                 properties: {
+                  originalTitle: { type: "string" },
                   title: { type: "string" },
                   year: { type: "integer" },
                   seriesIndex: { type: "integer" },
                   arc: { type: "string" },
                 },
-                required: ["title", "year", "seriesIndex", "arc"],
+                required: ["originalTitle", "title", "year", "seriesIndex", "arc"],
                 additionalProperties: false,
               },
             },

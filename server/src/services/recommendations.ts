@@ -115,7 +115,15 @@ export async function getRecommendations(
           googleCandidates = [];
         }
 
-        const resolved = await resolveBookData(s.title, s.author, s.year, googleCandidates, new Set(), new Set());
+        const resolved = await resolveBookData(
+          s.title,
+          s.title,
+          s.author,
+          s.year,
+          googleCandidates,
+          new Set(),
+          new Set()
+        );
         const resolvedKey = `${normalize(resolved.title)}|${normalize(resolved.author)}`;
         if (knownKeys.has(resolvedKey)) continue;
         knownKeys.add(key);

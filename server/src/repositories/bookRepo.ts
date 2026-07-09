@@ -70,6 +70,21 @@ export async function bookExists(id: string): Promise<boolean> {
   return !!(await db.prepare("SELECT 1 FROM books WHERE id = ?").get(id));
 }
 
+// Szuka już istniejącej książki o tym samym tytule/autorze (dokładne
+// dopasowanie po normalizacji wielkości liter/białych znaków) — używane przy
+// zapisie nowo znalezionych książek, żeby to samo wydanie nie trafiało do
+// bazy dwa razy pod różnymi id (np. raz z Google Books, raz z Open Library).
+export async function findByTitleAuthor(title: string, author: string): Promise<string | null> {
+  const row = (await db
+    .prepare(
+      `SELECT id FROM books
+       WHERE lower(trim(title)) = lower(trim(?)) AND lower(trim(author)) = lower(trim(?))
+       LIMIT 1`
+    )
+    .get(title, author)) as { id: string } | undefined;
+  return row?.id ?? null;
+}
+
 const upsertShelfStatus = db.prepare(
   `INSERT INTO shelf (book_id, status) VALUES (?, ?)
    ON CONFLICT(book_id) DO UPDATE SET status = excluded.status`

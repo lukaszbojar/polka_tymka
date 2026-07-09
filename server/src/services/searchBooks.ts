@@ -1,7 +1,7 @@
 import { orderSeriesVolumes, recognizeQuery } from "./claude";
 import { searchGoogleBooks, type GoogleBooksResult } from "./googleBooks";
 import { searchOpenLibraryPolish } from "./openLibrary";
-import { getShelfStatuses, upsertBook, type NewBook } from "../repositories/bookRepo";
+import { findByTitleAuthor, getShelfStatuses, upsertBook, type NewBook } from "../repositories/bookRepo";
 import { getCachedSearch, setCachedSearch } from "../repositories/searchCacheRepo";
 import { normalizeTitle, titlesMatch } from "../lib/text";
 import { slugify } from "../lib/slug";
@@ -62,25 +62,52 @@ interface ResolvedBook {
   rawJson: string | null;
 }
 
-// Kolejność źródeł danych o książce: 1) Google Books, 2) Open Library (lepsze
-// pokrycie polskich wydań), 3) dopiero gdy obu brak — wiedza własna Claude
-// (tytuł/rok/autor już ustalone wcześniej), bez okładki.
+// Kolejność źródeł danych o książce: 1) Google Books (najpierw w puli kandydatów
+// z zapytania o całą serię, potem — jeśli brak trafienia — celowane zapytanie o
+// ten jeden tom), 2) Open Library (lepsze pokrycie polskich wydań), 3) dopiero
+// gdy obu brak — wiedza własna Claude (tytuł/rok/autor już ustalone wcześniej),
+// bez okładki. Dopasowanie robimy po tytule ORYGINALNYM (dużo bardziej
+// wiarygodny niż tytuł "po polsku" zgadnięty przez Claude z pamięci) — a gdy
+// katalog faktycznie zna wydanie, jego własny tytuł (często polski) zastępuje
+// zgadywankę Claude, więc nie polegamy na tłumaczeniu z pamięci.
 export async function resolveBookData(
-  targetTitle: string,
+  originalTitle: string,
+  polishTitleGuess: string,
   fallbackAuthor: string,
   fallbackYear: number,
   googleCandidates: GoogleBooksResult[],
   usedGoogleIds: Set<string>,
   usedOpenLibraryKeys: Set<string>
 ): Promise<ResolvedBook> {
-  const gbMatch = pickClosest(
+  const preference = (c: GoogleBooksResult) =>
+    (c.thumbnail ? 1 : 0) + (c.thumbnail && c.language === "pl" ? 1 : 0);
+
+  let gbMatch = pickClosest(
     googleCandidates,
-    targetTitle,
+    originalTitle,
     (c) => c.title,
     (c) => c.volumeId,
-    (c) => (c.thumbnail ? 1 : 0) + (c.thumbnail && c.language === "pl" ? 1 : 0),
+    preference,
     usedGoogleIds
   );
+  if (!gbMatch && polishTitleGuess !== originalTitle) {
+    gbMatch = pickClosest(
+      googleCandidates,
+      polishTitleGuess,
+      (c) => c.title,
+      (c) => c.volumeId,
+      preference,
+      usedGoogleIds
+    );
+  }
+  if (!gbMatch) {
+    try {
+      const targeted = await searchGoogleBooks(`intitle:${originalTitle} inauthor:${fallbackAuthor}`, 10);
+      gbMatch = pickClosest(targeted, originalTitle, (c) => c.title, (c) => c.volumeId, preference, usedGoogleIds);
+    } catch {
+      // ignorujemy — spróbujemy jeszcze Open Library
+    }
+  }
   if (gbMatch) {
     usedGoogleIds.add(gbMatch.volumeId);
     return {
@@ -96,10 +123,10 @@ export async function resolveBookData(
   }
 
   try {
-    const olCandidates = await searchOpenLibraryPolish(targetTitle, fallbackAuthor);
+    const olCandidates = await searchOpenLibraryPolish(originalTitle, fallbackAuthor);
     const olMatch = pickClosest(
       olCandidates,
-      targetTitle,
+      originalTitle,
       (r) => r.title,
       (r) => r.workKey || r.title,
       (r) => (r.coverUrl ? 1 : 0),
@@ -119,12 +146,12 @@ export async function resolveBookData(
       };
     }
   } catch (err) {
-    console.error(`Open Library nie odpowiedziało dla "${targetTitle}":`, (err as Error).message);
+    console.error(`Open Library nie odpowiedziało dla "${originalTitle}":`, (err as Error).message);
   }
 
   return {
-    id: `claude:${slugify(targetTitle)}-${slugify(fallbackAuthor)}`,
-    title: targetTitle,
+    id: `claude:${slugify(polishTitleGuess)}-${slugify(fallbackAuthor)}`,
+    title: polishTitleGuess,
     author: fallbackAuthor,
     year: fallbackYear,
     genres: [],
@@ -170,14 +197,16 @@ async function performSearch(query: string): Promise<SearchResult> {
   if (recognized.type === "book") {
     const resolved = await resolveBookData(
       recognized.canonicalTitle,
+      recognized.canonicalTitle,
       recognized.author,
       recognized.year,
       candidates,
       usedGoogleIds,
       usedOpenLibraryKeys
     );
+    const id = (await findByTitleAuthor(resolved.title, resolved.author)) ?? resolved.id;
     newBooks.push({
-      id: resolved.id,
+      id,
       title: resolved.title,
       author: resolved.author,
       series: null,
@@ -198,6 +227,7 @@ async function performSearch(query: string): Promise<SearchResult> {
 
     for (const volume of ordered) {
       const resolved = await resolveBookData(
+        volume.originalTitle,
         volume.title,
         recognized.author,
         volume.year,
@@ -205,8 +235,9 @@ async function performSearch(query: string): Promise<SearchResult> {
         usedGoogleIds,
         usedOpenLibraryKeys
       );
+      const id = (await findByTitleAuthor(resolved.title, resolved.author)) ?? resolved.id;
       newBooks.push({
-        id: resolved.id,
+        id,
         title: resolved.title,
         author: resolved.author,
         series: recognized.canonicalTitle,
