@@ -51,6 +51,22 @@ function pickClosest<T>(
   return closest[0].item;
 }
 
+// Uruchamia `fn` dla wszystkich elementów z ograniczoną liczbą jednoczesnych
+// wywołań — rozwiązywanie tomów serii sekwencyjnie (jeden po drugim) potrafiło
+// dla dłuższych serii przekroczyć limit czasu funkcji serverless na Vercelu.
+async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let cursor = 0;
+  async function worker() {
+    while (cursor < items.length) {
+      const i = cursor++;
+      results[i] = await fn(items[i]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
+
 interface ResolvedBook {
   id: string;
   title: string;
@@ -62,14 +78,78 @@ interface ResolvedBook {
   rawJson: string | null;
 }
 
-// Kolejność źródeł danych o książce: 1) Google Books (najpierw w puli kandydatów
-// z zapytania o całą serię, potem — jeśli brak trafienia — celowane zapytanie o
-// ten jeden tom), 2) Open Library (lepsze pokrycie polskich wydań), 3) dopiero
-// gdy obu brak — wiedza własna Claude (tytuł/rok/autor już ustalone wcześniej),
-// bez okładki. Dopasowanie robimy po tytule ORYGINALNYM (dużo bardziej
-// wiarygodny niż tytuł "po polsku" zgadnięty przez Claude z pamięci) — a gdy
-// katalog faktycznie zna wydanie, jego własny tytuł (często polski) zastępuje
-// zgadywankę Claude, więc nie polegamy na tłumaczeniu z pamięci.
+const gbPreference = (c: GoogleBooksResult) =>
+  (c.thumbnail ? 1 : 0) + (c.thumbnail && c.language === "pl" ? 1 : 0);
+
+// Dopasowuje pulę kandydatów Google Books względem OBU wariantów tytułu
+// (oryginalnego i polskiej zgadywanki) i wybiera lepszy wynik — bez tego
+// dopasowywanie tylko po tytule oryginalnym premiowałoby angielskie wydania
+// (łatwiej trafiają w dopasowanie tekstowe), nawet gdy w tej samej puli jest
+// też polskie wydanie.
+function bestGoogleMatch(
+  items: GoogleBooksResult[],
+  originalTitle: string,
+  polishTitleGuess: string,
+  exclude: Set<string>
+): GoogleBooksResult | null {
+  const byOriginal = pickClosest(items, originalTitle, (c) => c.title, (c) => c.volumeId, gbPreference, exclude);
+  if (polishTitleGuess === originalTitle) return byOriginal;
+  const byPolish = pickClosest(items, polishTitleGuess, (c) => c.title, (c) => c.volumeId, gbPreference, exclude);
+  if (byOriginal && byPolish) {
+    return gbPreference(byPolish) >= gbPreference(byOriginal) ? byPolish : byOriginal;
+  }
+  return byPolish ?? byOriginal;
+}
+
+async function findOpenLibraryMatch(
+  originalTitle: string,
+  polishTitleGuess: string,
+  fallbackAuthor: string,
+  usedOpenLibraryKeys: Set<string>
+) {
+  // Open Library indeksuje wydania pod ich WŁASNYM tytułem — zapytanie
+  // tekstem angielskim praktycznie nigdy nie znajdzie polskiego wydania (nie
+  // ma powiązania między tytułami w różnych językach w ich wyszukiwarce), więc
+  // pytamy głównie polską zgadywanką; do angielskiego tytułu wracamy tylko
+  // gdy zgadywanka nic nie dała (jedno zapytanie, nie dwa — oszczędność czasu).
+  const primaryTitle = polishTitleGuess;
+  const olCandidates = await searchOpenLibraryPolish(primaryTitle, fallbackAuthor);
+  const olPreference = (r: (typeof olCandidates)[number]) => (r.coverUrl ? 1 : 0);
+
+  let olMatch = pickClosest(
+    olCandidates,
+    primaryTitle,
+    (r) => r.title,
+    (r) => r.workKey || r.title,
+    olPreference,
+    usedOpenLibraryKeys
+  );
+  if (olMatch || polishTitleGuess === originalTitle) return olMatch;
+
+  const fallbackCandidates = await searchOpenLibraryPolish(originalTitle, fallbackAuthor).catch(
+    () => [] as typeof olCandidates
+  );
+  return pickClosest(
+    fallbackCandidates,
+    originalTitle,
+    (r) => r.title,
+    (r) => r.workKey || r.title,
+    olPreference,
+    usedOpenLibraryKeys
+  );
+}
+
+// Kolejność źródeł danych o książce: 1) Open Library — sprawdzane NAJPIERW,
+// bo zwraca wyłącznie wydania polskie (language:pol), więc to ono decyduje,
+// gdy Google Books ma tylko wydanie w innym języku; wyjątek: jeśli Google
+// Books w puli kandydatów z zapytania o całą serię ma TEŻ polskie wydanie z
+// okładką, nie warto już pytać Open Library (oszczędność zapytania). 2) Google
+// Books (najpierw pula kandydatów, potem — jeśli brak trafienia — celowane
+// zapytanie o ten jeden tom, próbowane RÓWNOLEGLE dla obu wariantów tytułu).
+// 3) dopiero gdy obu brak — wiedza własna Claude (tytuł/rok/autor już
+// ustalone wcześniej), bez okładki. Dopasowanie zawsze sprawdza zarówno tytuł
+// oryginalny (bardziej wiarygodny niż zgadywanka Claude), jak i polską
+// zgadywankę (żeby polskie wydanie wygrało, gdy istnieje w danej puli).
 export async function resolveBookData(
   originalTitle: string,
   polishTitleGuess: string,
@@ -79,33 +159,45 @@ export async function resolveBookData(
   usedGoogleIds: Set<string>,
   usedOpenLibraryKeys: Set<string>
 ): Promise<ResolvedBook> {
-  const preference = (c: GoogleBooksResult) =>
-    (c.thumbnail ? 1 : 0) + (c.thumbnail && c.language === "pl" ? 1 : 0);
+  const broadMatch = bestGoogleMatch(googleCandidates, originalTitle, polishTitleGuess, usedGoogleIds);
+  const broadIsPolish = !!broadMatch?.thumbnail && broadMatch.language === "pl";
 
-  let gbMatch = pickClosest(
-    googleCandidates,
-    originalTitle,
-    (c) => c.title,
-    (c) => c.volumeId,
-    preference,
-    usedGoogleIds
-  );
-  if (!gbMatch && polishTitleGuess !== originalTitle) {
-    gbMatch = pickClosest(
-      googleCandidates,
-      polishTitleGuess,
-      (c) => c.title,
-      (c) => c.volumeId,
-      preference,
-      usedGoogleIds
-    );
+  if (!broadIsPolish) {
+    try {
+      const olMatch = await findOpenLibraryMatch(originalTitle, polishTitleGuess, fallbackAuthor, usedOpenLibraryKeys);
+      if (olMatch) {
+        usedOpenLibraryKeys.add(olMatch.workKey || olMatch.title);
+        return {
+          id: `openlibrary:${olMatch.workKey || slugify(olMatch.title)}`,
+          title: olMatch.title,
+          author: olMatch.authors[0] ?? fallbackAuthor,
+          year: olMatch.year ?? fallbackYear,
+          genres: [],
+          coverUrl: olMatch.coverUrl,
+          source: "openlibrary",
+          rawJson: JSON.stringify(olMatch),
+        };
+      }
+    } catch (err) {
+      console.error(`Open Library nie odpowiedziało dla "${originalTitle}":`, (err as Error).message);
+    }
   }
+
+  let gbMatch = broadMatch;
   if (!gbMatch) {
     try {
-      const targeted = await searchGoogleBooks(`intitle:${originalTitle} inauthor:${fallbackAuthor}`, 10);
-      gbMatch = pickClosest(targeted, originalTitle, (c) => c.title, (c) => c.volumeId, preference, usedGoogleIds);
+      const queries =
+        polishTitleGuess === originalTitle
+          ? [searchGoogleBooks(`intitle:${originalTitle} inauthor:${fallbackAuthor}`, 10)]
+          : [
+              searchGoogleBooks(`intitle:${originalTitle} inauthor:${fallbackAuthor}`, 10),
+              searchGoogleBooks(`intitle:${polishTitleGuess} inauthor:${fallbackAuthor}`, 10),
+            ];
+      const results = await Promise.all(queries.map((p) => p.catch(() => [] as GoogleBooksResult[])));
+      const targeted = results.flat();
+      gbMatch = bestGoogleMatch(targeted, originalTitle, polishTitleGuess, usedGoogleIds);
     } catch {
-      // ignorujemy — spróbujemy jeszcze Open Library
+      // ignorujemy — nie ma już czego próbować, spadamy do zgadywanki Claude
     }
   }
   if (gbMatch) {
@@ -120,33 +212,6 @@ export async function resolveBookData(
       source: "googlebooks",
       rawJson: JSON.stringify(gbMatch),
     };
-  }
-
-  try {
-    const olCandidates = await searchOpenLibraryPolish(originalTitle, fallbackAuthor);
-    const olMatch = pickClosest(
-      olCandidates,
-      originalTitle,
-      (r) => r.title,
-      (r) => r.workKey || r.title,
-      (r) => (r.coverUrl ? 1 : 0),
-      usedOpenLibraryKeys
-    );
-    if (olMatch) {
-      usedOpenLibraryKeys.add(olMatch.workKey || olMatch.title);
-      return {
-        id: `openlibrary:${olMatch.workKey || slugify(olMatch.title)}`,
-        title: olMatch.title,
-        author: olMatch.authors[0] ?? fallbackAuthor,
-        year: olMatch.year ?? fallbackYear,
-        genres: [],
-        coverUrl: olMatch.coverUrl,
-        source: "openlibrary",
-        rawJson: JSON.stringify(olMatch),
-      };
-    }
-  } catch (err) {
-    console.error(`Open Library nie odpowiedziało dla "${originalTitle}":`, (err as Error).message);
   }
 
   return {
@@ -182,6 +247,7 @@ export async function search(query: string): Promise<SearchResult> {
 }
 
 async function performSearch(query: string): Promise<SearchResult> {
+  const searchStart = Date.now();
   const recognized = await recognizeQuery(query);
   let candidates: GoogleBooksResult[] = [];
   try {
@@ -225,7 +291,7 @@ async function performSearch(query: string): Promise<SearchResult> {
       candidates.map((c) => ({ title: c.title, authors: c.authors, year: c.year }))
     );
 
-    for (const volume of ordered) {
+    const resolvedVolumes = await mapWithConcurrency(ordered, 5, async (volume) => {
       const resolved = await resolveBookData(
         volume.originalTitle,
         volume.title,
@@ -236,6 +302,10 @@ async function performSearch(query: string): Promise<SearchResult> {
         usedOpenLibraryKeys
       );
       const id = (await findByTitleAuthor(resolved.title, resolved.author)) ?? resolved.id;
+      return { volume, resolved, id };
+    });
+
+    for (const { volume, resolved, id } of resolvedVolumes) {
       newBooks.push({
         id,
         title: resolved.title,
@@ -255,6 +325,8 @@ async function performSearch(query: string): Promise<SearchResult> {
   for (const book of newBooks) await upsertBook(book);
 
   const statuses = await getShelfStatuses(newBooks.map((b) => b.id));
+
+  console.log(`Wyszukiwanie "${query}" zajęło ${Date.now() - searchStart}ms (${newBooks.length} książek)`);
 
   return {
     type: recognized.type,

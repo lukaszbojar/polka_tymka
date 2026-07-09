@@ -89,7 +89,7 @@ export async function orderSeriesVolumes(
 
   const stream = getClient().messages.stream({
     model: MODEL,
-    max_tokens: 16000,
+    max_tokens: 8000,
     thinking: { type: "adaptive" },
     system:
       `Uporządkuj KOMPLETNĄ listę tomów serii "${seriesName}" (${author}) na podstawie swojej ` +
@@ -122,6 +122,11 @@ export async function orderSeriesVolumes(
       "odpowiedzi.\n\nLista pomocnicza z Google Books:",
     messages: [{ role: "user", content: candidateList || "(brak kandydatów z Google Books)" }],
     output_config: {
+      // Niższy poziom "effort" — na dłuższych seriach domyślne (wyższe)
+      // myślenie adaptacyjne potrafiło trwać kilkadziesiąt sekund, co
+      // przekraczało limit czasu funkcji serverless. Trochę kosztuje
+      // kompletność, ale wyszukiwanie musi w ogóle zdążyć się wykonać.
+      effort: "medium",
       format: {
         type: "json_schema",
         schema: {
