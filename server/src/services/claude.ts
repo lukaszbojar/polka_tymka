@@ -92,17 +92,18 @@ export async function orderSeriesVolumes(
     max_tokens: 8000,
     thinking: { type: "adaptive" },
     system:
-      `Uporządkuj KOMPLETNĄ listę tomów serii "${seriesName}" (${author}) na podstawie swojej ` +
-      "wiedzy — niezależnie od tego, czy poniższa lista pomocnicza z Google Books jest pełna, " +
-      "niepełna czy pusta (może brakować wyników, np. z powodu awarii zewnętrznego API). " +
-      "To częsty błąd: wymienienie tylko pierwszych/najbardziej znanych tomów i pominięcie " +
-      "nowszych kontynuacji, dodatkowych podcykli (np. prequeli, spin-offów wydawanych pod tą " +
-      "samą marką) wydanych w kolejnych latach — WYPISZ WSZYSTKIE z nich, nawet jeśli seria ma " +
-      "kilkanaście-kilkadziesiąt tomów łącznie z podcyklami. Nie ograniczaj się do jednego, " +
-      '"głównego" podcyklu, jeśli pod tą nazwą serii wydawane są też inne (np. prequele czy ' +
-      "kontynuacje innego autora numeracji) — o ile są częścią tej samej marki wydawniczej, " +
-      "uwzględnij je i opisz przez pole arc. Uporządkuj tomy chronologicznie (kolejność " +
-      "wydania/czytania), i przypisz każdemu seriesIndex (od 1, ciągłe przez całą markę) oraz " +
+      `Uporządkuj listę tomów serii "${seriesName}" (${author}) na podstawie swojej wiedzy — ` +
+      "niezależnie od tego, czy poniższa lista pomocnicza z Google Books jest pełna, niepełna " +
+      "czy pusta (może brakować wyników, np. z powodu awarii zewnętrznego API). To częsty błąd: " +
+      "wymienienie tylko pierwszych/najbardziej znanych tomów i pominięcie nowszych kontynuacji, " +
+      "dodatkowych podcykli (np. prequeli, spin-offów wydawanych pod tą samą marką) wydanych w " +
+      'kolejnych latach — jeśli seria ma kilkanaście-kilkadziesiąt tomów, nie ograniczaj się do ' +
+      'jednego, "głównego" podcyklu. LIMIT: maksymalnie 25 tomów w odpowiedzi. Jeśli marka ma ' +
+      "ich więcej (typowe dla bardzo długich serii dla dzieci, np. z kilkoma podcyklami po 6 " +
+      "tomów każdy), wybierz PIERWSZE chronologicznie 25 — w całości pokryj tyle kolejnych " +
+      "podcykli, ile zmieści się w tym limicie, zamiast urywać w połowie ostatniego z nich " +
+      "(czyli np. 24 tomy z 4 pełnych podcykli po 6, zamiast 25 z urwanym piątym). Uporządkuj " +
+      "tomy chronologicznie (kolejność wydania/czytania), i przypisz każdemu seriesIndex (od 1, " +
       'arc — nazwę podcyklu (np. "Seria główna", "Wczesne lata"/prequele, itp.) lub pusty ' +
       'string "" jeśli seria nie ma podcykli. Pole "originalTitle" to tytuł oryginalny (w ' +
       "języku, w jakim książka została pierwotnie wydana) — to pole musi być precyzyjne, będzie " +
@@ -157,7 +158,10 @@ export async function orderSeriesVolumes(
 
   const response = await stream.finalMessage();
   const { volumes } = extractJson<{ volumes: OrderedVolume[] }>(response);
-  return volumes;
+  // Twardy limit niezależny od tego, czy model dokładnie zastosował się do
+  // instrukcji w promptcie — bez tego bardzo długie serie (np. kilkadziesiąt
+  // tomów) potrafiły przekroczyć limit czasu funkcji serverless.
+  return volumes.slice(0, 25);
 }
 
 // Generuje krótkie (1-2 zdania), przyjazne dziecku (8-12 lat) streszczenie bez
