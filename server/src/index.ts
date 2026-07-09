@@ -26,21 +26,23 @@ app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
 });
 
-app.get("/api/shelf", (_req, res) => {
-  res.json({ books: listShelf() });
+app.get("/api/shelf", (req, res) => {
+  const status = req.query.status === "want" || req.query.status === "read" ? req.query.status : undefined;
+  res.json({ books: listShelf(status) });
 });
 
 app.post("/api/shelf", (req, res) => {
-  const { bookId, series } = req.body ?? {};
+  const { bookId, series, status } = req.body ?? {};
+  const shelfStatus = status === "want" ? "want" : "read";
 
   if (bookId) {
-    const ok = addToShelf(bookId);
+    const ok = addToShelf(bookId, shelfStatus);
     if (!ok) return res.status(404).json({ error: "Book not found" });
     return res.status(201).json({ books: listShelf() });
   }
 
   if (series) {
-    const added = addSeriesToShelf(series);
+    const added = addSeriesToShelf(series, shelfStatus);
     if (added === 0) return res.status(404).json({ error: "Series not found" });
     return res.status(201).json({ books: listShelf() });
   }
@@ -66,10 +68,15 @@ app.get("/api/search", async (req, res) => {
   }
 });
 
-app.get("/api/recommendations", (req, res) => {
+app.get("/api/recommendations", async (req, res) => {
   const offset = Number(req.query.offset ?? 0) || 0;
   const limit = Number(req.query.limit ?? 5) || 5;
-  res.json(getRecommendations(offset, limit));
+  try {
+    res.json(await getRecommendations(offset, limit));
+  } catch (err) {
+    console.error("Recommendations failed:", err);
+    res.status(502).json({ error: "Nie udało się pobrać rekomendacji" });
+  }
 });
 
 async function main() {

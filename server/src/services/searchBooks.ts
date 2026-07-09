@@ -1,7 +1,7 @@
 import { orderSeriesVolumes, recognizeQuery } from "./claude";
 import { searchGoogleBooks, type GoogleBooksResult } from "./googleBooks";
 import { searchOpenLibraryPolish } from "./openLibrary";
-import { getOnShelfIds, upsertBook, type NewBook } from "../repositories/bookRepo";
+import { getShelfStatuses, upsertBook, type NewBook } from "../repositories/bookRepo";
 import { getCachedSearch, setCachedSearch } from "../repositories/searchCacheRepo";
 import { normalizeTitle, titlesMatch } from "../lib/text";
 import { slugify } from "../lib/slug";
@@ -16,7 +16,7 @@ export interface SearchResultBook {
   year: number;
   genres: string[];
   coverUrl: string | null;
-  onShelf: boolean;
+  shelfStatus: "read" | "want" | null;
 }
 
 export interface SearchResult {
@@ -133,14 +133,17 @@ async function resolveBookData(
 }
 
 // Publiczne wejście: sprawdza cache (TTL 30 dni), w razie trafienia odświeża
-// tylko flagi onShelf (mogły się zmienić od czasu zapisania w cache'u).
+// tylko status na półce (mógł się zmienić od czasu zapisania w cache'u).
 export async function search(query: string): Promise<SearchResult> {
   const cached = getCachedSearch(query);
   if (cached) {
-    const onShelfIds = getOnShelfIds(cached.books.map((b) => b.id));
+    const statuses = getShelfStatuses(cached.books.map((b) => b.id));
     return {
       ...cached,
-      books: cached.books.map((b) => ({ ...b, onShelf: onShelfIds.has(b.id) })),
+      books: cached.books.map((b) => ({
+        ...b,
+        shelfStatus: (statuses.get(b.id) as "read" | "want" | undefined) ?? null,
+      })),
     };
   }
 
@@ -218,7 +221,7 @@ async function performSearch(query: string): Promise<SearchResult> {
 
   for (const book of newBooks) upsertBook(book);
 
-  const onShelfIds = getOnShelfIds(newBooks.map((b) => b.id));
+  const statuses = getShelfStatuses(newBooks.map((b) => b.id));
 
   return {
     type: recognized.type,
@@ -236,7 +239,7 @@ async function performSearch(query: string): Promise<SearchResult> {
         year: b.year,
         genres: b.genres,
         coverUrl: b.coverUrl,
-        onShelf: onShelfIds.has(b.id),
+        shelfStatus: (statuses.get(b.id) as "read" | "want" | undefined) ?? null,
       })),
   };
 }

@@ -5,4 +5,6 @@ export interface Recommendation {
   series: string | null;
   year: number;
   coverUrl: string | null;
+  summary: string | null;
+  seriesSummary: string | null;
 }

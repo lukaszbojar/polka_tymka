@@ -1,56 +1,40 @@
-import { useEffect, useState } from "react";
-import { Sidebar } from "./components/Sidebar";
-import { Bookcase } from "./components/Bookcase";
-import { fetchShelf, removeFromShelf } from "./lib/api";
-import type { Book } from "./types/book";
-import type { ShelfFilter } from "./types/filter";
+import { useState } from "react";
+import { ShelfTab } from "./tabs/ShelfTab";
+import { SearchTab } from "./tabs/SearchTab";
+import { ToReadTab } from "./tabs/ToReadTab";
+import { RecommendTab } from "./tabs/RecommendTab";
+
+type Tab = "shelf" | "search" | "toread" | "recommend";
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: "shelf", label: "Półka" },
+  { id: "search", label: "Wyszukiwanie" },
+  { id: "toread", label: "Do przeczytania" },
+  { id: "recommend", label: "Poleć mi" },
+];
 
 export default function App() {
-  const [books, setBooks] = useState<Book[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<ShelfFilter | null>(null);
-
-  useEffect(() => {
-    fetchShelf()
-      .then(setBooks)
-      .catch((err) => setError(err.message));
-  }, []);
-
-  async function handleRemove(bookId: string) {
-    const previous = books;
-    setBooks((current) => current?.filter((b) => b.id !== bookId) ?? current);
-    try {
-      await removeFromShelf(bookId);
-    } catch (err) {
-      setBooks(previous);
-      setError((err as Error).message);
-    }
-  }
-
-  function refetchShelf() {
-    fetchShelf()
-      .then(setBooks)
-      .catch((err) => setError(err.message));
-  }
-
-  if (error) {
-    return <div className="empty">Nie udało się połączyć z serwerem: {error}</div>;
-  }
+  const [tab, setTab] = useState<Tab>("shelf");
 
   return (
-    <div className="app">
-      <Sidebar
-        books={books ?? []}
-        onShelfChanged={refetchShelf}
-        filter={filter}
-        onFilterChange={setFilter}
-      />
-      <Bookcase
-        books={books ?? []}
-        onRemove={handleRemove}
-        filter={filter}
-        onFilterChange={setFilter}
-      />
+    <div className="app-shell">
+      <nav className="tab-nav">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            className={`tab-btn${tab === t.id ? " active" : ""}`}
+            onClick={() => setTab(t.id)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </nav>
+      <div className="tab-content">
+        {tab === "shelf" && <ShelfTab />}
+        {tab === "search" && <SearchTab />}
+        {tab === "toread" && <ToReadTab />}
+        {tab === "recommend" && <RecommendTab />}
+      </div>
     </div>
   );
 }

@@ -1,10 +1,5 @@
-import { useState } from "react";
 import type { Book } from "../types/book";
-import type { SearchResult } from "../types/searchResult";
 import type { ShelfFilter } from "../types/filter";
-import { addBookToShelf, addSeriesToShelf, searchBooks } from "../lib/api";
-import { SearchResults } from "./SearchResults";
-import { Recommendations } from "./Recommendations";
 
 function countBy(books: Book[], pick: (b: Book) => string[] | string) {
   const counts = new Map<string, number>();
@@ -19,73 +14,16 @@ function countBy(books: Book[], pick: (b: Book) => string[] | string) {
 
 export function Sidebar({
   books,
-  onShelfChanged,
   filter,
   onFilterChange,
 }: {
   books: Book[];
-  onShelfChanged: () => void;
   filter: ShelfFilter | null;
   onFilterChange: (filter: ShelfFilter | null) => void;
 }) {
-  const [query, setQuery] = useState("");
-  const [result, setResult] = useState<SearchResult | null>(null);
-  const [searching, setSearching] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
-
   const seriesCount = new Set(books.filter((b) => b.series).map((b) => b.series)).size;
   const authors = countBy(books, (b) => b.author);
   const genres = countBy(books, (b) => b.genres);
-
-  async function runSearch() {
-    const q = query.trim();
-    if (!q) return;
-    setSearching(true);
-    setSearchError(null);
-    try {
-      const found = await searchBooks(q);
-      setResult(found);
-    } catch (err) {
-      setSearchError((err as Error).message);
-      setResult(null);
-    } finally {
-      setSearching(false);
-    }
-  }
-
-  function markOnShelf(bookIds: Set<string>) {
-    setResult((current) =>
-      current
-        ? {
-            ...current,
-            books: current.books.map((b) =>
-              bookIds.has(b.id) ? { ...b, onShelf: true } : b
-            ),
-          }
-        : current
-    );
-  }
-
-  async function handleAddBook(bookId: string) {
-    try {
-      await addBookToShelf(bookId);
-      markOnShelf(new Set([bookId]));
-      onShelfChanged();
-    } catch (err) {
-      setSearchError((err as Error).message);
-    }
-  }
-
-  async function handleAddSeries(series: string) {
-    try {
-      await addSeriesToShelf(series);
-      const ids = new Set(result?.books.map((b) => b.id) ?? []);
-      markOnShelf(ids);
-      onShelfChanged();
-    } catch (err) {
-      setSearchError((err as Error).message);
-    }
-  }
 
   function toggleFilter(type: ShelfFilter["type"], value: string) {
     onFilterChange(filter && filter.type === type && filter.value === value ? null : { type, value });
@@ -97,27 +35,6 @@ export function Sidebar({
         <p className="eyebrow">biblioteka przygód</p>
         <h1>Półka Tymka</h1>
       </div>
-
-      <div className="search">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="11" cy="11" r="7" />
-          <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
-        <input
-          type="text"
-          placeholder="Dodaj książkę lub serię…"
-          autoComplete="off"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") runSearch();
-          }}
-        />
-      </div>
-
-      {searching && <p className="search-status">Szukam…</p>}
-      {searchError && <p className="search-status search-status-error">{searchError}</p>}
-      {result && !searching && <SearchResults result={result} onAddBook={handleAddBook} onAddSeries={handleAddSeries} />}
 
       <div className="stats-grid">
         <div className="stat">
@@ -175,8 +92,6 @@ export function Sidebar({
           ))}
         </div>
       </div>
-
-      <Recommendations onShelfChanged={onShelfChanged} />
     </aside>
   );
 }

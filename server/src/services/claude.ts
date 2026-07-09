@@ -169,3 +169,23 @@ export async function generateSummary(
   }
   return block.text.trim();
 }
+
+// Krótki opis całej serii (1-2 zdania) — o czym jest, nie tylko pierwszy tom.
+export async function generateSeriesSummary(series: string, author: string): Promise<string> {
+  const response = await getClient().messages.create({
+    model: MODEL,
+    max_tokens: 300,
+    thinking: { type: "adaptive" },
+    system:
+      "Napisz proste, przyjazne dziecku (8-12 lat) streszczenie CAŁEJ serii książek w 1-2 " +
+      "zdaniach, po polsku, bez spoilerów. Opisz ogólny pomysł/świat serii, nie fabułę " +
+      "jednego tomu. Zwróć wyłącznie sam tekst — bez cudzysłowów, bez tytułu.",
+    messages: [{ role: "user", content: `Seria: ${series}\nAutor: ${author}` }],
+  });
+
+  const block = response.content.find((b) => b.type === "text");
+  if (!block || block.type !== "text") {
+    throw new Error("Claude nie zwrócił streszczenia serii");
+  }
+  return block.text.trim();
+}

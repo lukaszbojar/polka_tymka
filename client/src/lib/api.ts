@@ -2,8 +2,9 @@ import type { Book } from "../types/book";
 import type { SearchResult } from "../types/searchResult";
 import type { Recommendation } from "../types/recommendation";
 
-export async function fetchShelf(): Promise<Book[]> {
-  const res = await fetch("/api/shelf");
+export async function fetchShelf(status?: "read" | "want"): Promise<Book[]> {
+  const url = status ? `/api/shelf?status=${status}` : "/api/shelf";
+  const res = await fetch(url);
   if (!res.ok) throw new Error(`GET /api/shelf failed: ${res.status}`);
   const data = await res.json();
   return data.books as Book[];
@@ -36,12 +37,15 @@ async function postToShelf(body: Record<string, string>): Promise<Book[]> {
   return data.books as Book[];
 }
 
-export function addBookToShelf(bookId: string): Promise<Book[]> {
-  return postToShelf({ bookId });
+export function addBookToShelf(bookId: string, status: "read" | "want" = "read"): Promise<Book[]> {
+  return postToShelf({ bookId, status });
 }
 
-export function addSeriesToShelf(series: string): Promise<Book[]> {
-  return postToShelf({ series });
+export function addSeriesToShelf(
+  series: string,
+  status: "read" | "want" = "read"
+): Promise<Book[]> {
+  return postToShelf({ series, status });
 }
 
 export async function fetchRecommendations(

@@ -9,4 +9,5 @@ export interface Book {
   genres: string[];
   coverUrl: string | null;
   summary: string | null;
+  status: "read" | "want";
 }

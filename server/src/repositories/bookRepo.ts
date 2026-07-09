@@ -11,6 +11,7 @@ interface BookRow {
   genres: string;
   cover_url: string | null;
   summary: string | null;
+  status?: string;
 }
 
 export interface ShelfBook {
@@ -24,6 +25,7 @@ export interface ShelfBook {
   genres: string[];
   coverUrl: string | null;
   summary: string | null;
+  status: string;
 }
 
 function mapRow(row: BookRow): ShelfBook {
@@ -38,17 +40,27 @@ function mapRow(row: BookRow): ShelfBook {
     genres: JSON.parse(row.genres),
     coverUrl: row.cover_url,
     summary: row.summary,
+    status: row.status ?? "read",
   };
 }
 
-export function listShelf(): ShelfBook[] {
-  const rows = db
-    .prepare(
-      `SELECT b.* FROM books b
-       JOIN shelf s ON s.book_id = b.id
-       ORDER BY b.series, b.series_index`
-    )
-    .all() as BookRow[];
+export function listShelf(status?: "read" | "want"): ShelfBook[] {
+  const rows = status
+    ? (db
+        .prepare(
+          `SELECT b.*, s.status FROM books b
+           JOIN shelf s ON s.book_id = b.id
+           WHERE s.status = ?
+           ORDER BY b.series, b.series_index`
+        )
+        .all(status) as BookRow[])
+    : (db
+        .prepare(
+          `SELECT b.*, s.status FROM books b
+           JOIN shelf s ON s.book_id = b.id
+           ORDER BY b.series, b.series_index`
+        )
+        .all() as BookRow[]);
   return rows.map(mapRow);
 }
 
@@ -56,19 +68,23 @@ export function bookExists(id: string): boolean {
   return !!db.prepare("SELECT 1 FROM books WHERE id = ?").get(id);
 }
 
-export function addToShelf(bookId: string): boolean {
+const upsertShelfStatus = db.prepare(
+  `INSERT INTO shelf (book_id, status) VALUES (?, ?)
+   ON CONFLICT(book_id) DO UPDATE SET status = excluded.status`
+);
+
+export function addToShelf(bookId: string, status: "read" | "want" = "read"): boolean {
   if (!bookExists(bookId)) return false;
-  db.prepare("INSERT OR IGNORE INTO shelf (book_id, status) VALUES (?, 'read')").run(bookId);
+  upsertShelfStatus.run(bookId, status);
   return true;
 }
 
-export function addSeriesToShelf(series: string): number {
+export function addSeriesToShelf(series: string, status: "read" | "want" = "read"): number {
   const ids = db.prepare("SELECT id FROM books WHERE series = ?").all(series) as {
     id: string;
   }[];
-  const insert = db.prepare("INSERT OR IGNORE INTO shelf (book_id, status) VALUES (?, 'read')");
   const tx = db.transaction((rows: { id: string }[]) => {
-    for (const row of rows) insert.run(row.id);
+    for (const row of rows) upsertShelfStatus.run(row.id, status);
   });
   tx(ids);
   return ids.length;
@@ -102,11 +118,13 @@ export function upsertBook(book: NewBook): void {
   ).run({ ...book, genres: JSON.stringify(book.genres) });
 }
 
-export function getOnShelfIds(ids: string[]): Set<string> {
-  if (!ids.length) return new Set();
+// Mapa id -> status ('read'/'want') dla podanych książek, do oznaczania
+// przycisków dodawania w wynikach wyszukiwania/rekomendacji.
+export function getShelfStatuses(ids: string[]): Map<string, string> {
+  if (!ids.length) return new Map();
   const placeholders = ids.map(() => "?").join(",");
   const rows = db
-    .prepare(`SELECT book_id FROM shelf WHERE book_id IN (${placeholders})`)
-    .all(...ids) as { book_id: string }[];
-  return new Set(rows.map((r) => r.book_id));
+    .prepare(`SELECT book_id, status FROM shelf WHERE book_id IN (${placeholders})`)
+    .all(...ids) as { book_id: string; status: string }[];
+  return new Map(rows.map((r) => [r.book_id, r.status]));
 }

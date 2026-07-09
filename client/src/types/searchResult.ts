@@ -8,7 +8,7 @@ export interface SearchResultBook {
   year: number;
   genres: string[];
   coverUrl: string | null;
-  onShelf: boolean;
+  shelfStatus: "read" | "want" | null;
 }
 
 export interface SearchResult {
